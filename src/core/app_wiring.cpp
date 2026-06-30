@@ -32,6 +32,7 @@ static void hmi_update() {
         state.drive_mode = o.drive_mode;
         state.reset_req  = o.reset_req;
         can_bus::send_command(o.reset_req ? 2 : 1, o.drive_mode);  // 2=reset,1=set mode
+        state.reset_req = false;
     }
 }
 

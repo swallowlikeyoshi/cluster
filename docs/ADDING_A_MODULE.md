@@ -7,7 +7,7 @@ CAN 수신·디스플레이·IO는 코어가 처리합니다. (Cluster는 안전
 ## 규칙 (꼭 지키기)
 - 모듈 파일(`src/modules/*`)에서 `state.h` 와 `<Arduino.h>` 를 **include 하지 않는다.**
 - 값은 `types.h` 의 도메인 타입(`Percent`, `Unit`, `Rpm` ...)으로 받고 돌려준다 — 범위가 자동으로 지켜진다.
-- 계산에 이력(필터/적분)이 필요하면 **전역변수 대신 상태 struct를 인자로** 받는다 (`imu.h` 참고).
+- 계산에 이력(필터/적분)이 필요하면 **전역변수 대신 상태 struct를 인자로** 받는다 (`hmi_input.h` 의 `hmi_compute` 가 `prev_buttons` 를 인자로 받아 엣지 검출하는 방식 참고).
 
 ## 1. 모듈 만들기 (.h / .cpp 한 쌍)
 `src/modules/coolant.h`
@@ -41,7 +41,7 @@ int main(int,char**){ UNITY_BEGIN(); RUN_TEST(test_fan_turns_on_when_hot); retur
 실행: `pio test -e native -f test_coolant`
 
 ## 3. 공유 상태에 필드 추가 (코어 담당자에게 요청 or 직접)
-`include/state.h` 의 `VehicleState` 에 필요한 필드를 추가한다. 예: `bool fan_on;`
+`include/state.h` 의 `ClusterState` 에 필요한 필드를 추가한다. 예: `bool fan_on;`
 
 ## 4. 배선 한 줄 + 스케줄 한 줄 (코어 담당자 영역)
 `src/core/app_wiring.cpp`:
@@ -61,7 +61,7 @@ static void coolant_update() {
 
 ## 체크리스트
 - [ ] `*_compute()` 가 `state.h`/`Arduino.h` 를 include 하지 않는다
-- [ ] 입출력이 도메인 타입(`Percent` 등)이다
+- [ ] 입출력 타입이 모듈 헤더(.h)의 계약과 일치한다 (도메인 타입 `Percent` 등은 선택)
 - [ ] `pio test -e native -f test_<name>` 통과
 - [ ] `app_wiring.cpp` 에 `*_update()` + `g_tasks[]` 한 줄 추가
 - [ ] `pio run -e esp32dev` 빌드 성공
