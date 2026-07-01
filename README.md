@@ -1,0 +1,67 @@
+# HEVEN Cluster 펌웨어
+
+**2026 영광 대회 · 계기 클러스터(Instrument Cluster) + VESS** — ESP32가 CAN으로 차량 상태(속도·전압·SOC·온도·에러)를 **받아서** OLED 디스플레이·경고등(MCP23017)·경고음(VESS)으로 표현하고, 계기판 버튼 입력을 VCU로 보냅니다. VCU와 달리 **안전 임계가 약한 표시 전용 보드**입니다.
+
+> 🤖 **AI 에이전트/팀원은 [`AGENTS.md`](AGENTS.md)를 먼저 읽으세요** — 무엇을 고쳐도 되고 무엇을 건드리면 안 되는지 규칙이 있습니다.
+
+---
+
+## 한눈에
+
+- **스택**: PlatformIO + Arduino-ESP32, TWAI(CAN), U8g2(128×64 OLED), MCP23017(I/O 확장)
+- **구조**: 잠긴 코어(CAN·디스플레이·IO) + 팀원이 채우는 순수 모듈(`src/modules/`). VCU와 **동일한 2층 설계**지만 안전 FSM·50ms 라이프 태스크가 없고 CAN은 **수신(RX) 위주**입니다.
+- **상태**: ESP32 빌드 그린, 호스트 테스트 31개 통과
+
+## 빠른 시작
+
+```bash
+# 1. 이 레포를 깨끗한 위치에 클론
+git clone https://github.com/swallowlikeyoshi/cluster.git
+cd cluster
+
+# 2. PlatformIO 설치 (한 번만) — VS Code면 PlatformIO IDE 확장 설치로 대체 가능
+uv tool install platformio      # 또는: pipx install platformio
+
+# 3. 노트북에서 테스트 (하드웨어 불필요)
+pio test -e native
+
+# 4. 보드에 빌드 & 업로드 (ESP32 연결 상태에서)
+pio run -e esp32dev -t upload
+```
+
+> ℹ️ **현재는 CAN 수신 파싱이 스텁이라 계기판이 기본값(0 rpm, 0% SOC, 경고등 꺼짐)만 표시합니다.** 펌웨어는 정상 동작 중 — 실제 값은 아래 "미구현" 태스크를 구현하면 나옵니다.
+
+## 어디서 작업하나
+
+| 폴더 | 내용 | 편집? |
+|------|------|-------|
+| `src/modules/` | 순수 계산 함수 `xxx_compute()` | ✅ **여기서만** |
+| `test/` | 노트북 단위 테스트 | ✅ |
+| `src/core/`, `src/logic/`, `include/` | CAN·io_expander·display·스케줄러·타입 | 🔒 잠김 |
+| `platformio.ini`, `src/main.cpp` | 빌드 설정·진입점 | 🔒 잠김 |
+
+새 모듈을 추가하거나 기존 `compute()`를 채우는 법 → [`docs/ADDING_A_MODULE.md`](docs/ADDING_A_MODULE.md)
+
+## 모듈 목록 (FILL-IN)
+
+- `indicators` — 에러/HV/브레이크 → 경고등 비트마스크
+- `vess` — 속도 → 경고음 주파수 (규정 제12조: 70dB↑ 단순음)
+- `hmi_input` — 버튼 → 주행모드/리셋 커맨드
+- `display` — 차량상태 → 화면 뷰모델 (실제 그리기는 잠긴 U8g2 렌더러가 담당)
+
+각 모듈은 `xxx_compute(입력) → 출력` 순수 함수. 하드웨어·전역상태를 모릅니다.
+
+## 문서
+
+| 문서 | 내용 |
+|------|------|
+| [`AGENTS.md`](AGENTS.md) / `CLAUDE.md` | 작업 규칙 (에이전트·팀원 필독) |
+| [`docs/ADDING_A_MODULE.md`](docs/ADDING_A_MODULE.md) | 모듈 추가/작성 절차 |
+| [`docs/CAN_PROTOCOL.md`](docs/CAN_PROTOCOL.md) | CAN 메시지 명세 (VCU/Cluster 공유 단일 출처) |
+
+> 전체 설계 원리(compute/update 분리, state 격리, 테스트 등)는 **VCU 레포의 [`ARCHITECTURE.md`](https://github.com/swallowlikeyoshi/vcu/blob/main/docs/ARCHITECTURE.md)** 와 동일합니다.
+
+## 아직 미구현 (의도된 TODO)
+
+- **CAN RX 파싱** — `src/core/can_bus.cpp` `poll_rx()` 스텁. `docs/CAN_PROTOCOL.md` §7의 수신 경로(METER 직수신 vs VCU 게이트웨이) 결정 후 구현하면 계기판에 실제 값이 표시됩니다.
+- **OLED 컨트롤러 확정** — `display_render.cpp`가 SSD1309를 가정. 실제 2.42" 패널 확인 후 U8g2 생성자 조정 필요.
