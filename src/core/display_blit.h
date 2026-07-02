@@ -4,11 +4,11 @@
 //  Application work happens only in src/modules/.
 // ============================================================
 #pragma once
-#include "cluster_command.h"
-// [LOCKED] TWAI (ESP32 CAN). RX-first (vehicle state, stub) + Cluster->VCU command.
+#include "framebuffer.h"
+// [LOCKED] Pushes the 1bpp framebuffer to the physical panel. The panel is not
+// chosen yet, so show() is a stub; implement it when the OLED/LCD is selected.
 
-namespace can_bus {
+namespace display_blit {
     void begin();
-    void poll_rx();                          // drain RX -> state (parse is a stub)
-    void send_command(const ClusterCommand &cmd);   // encode -> 0x1801D0C0
+    void show(const FrameBuffer &fb);
 }
