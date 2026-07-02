@@ -1,36 +1,29 @@
 #include <unity.h>
 #include "modules/hmi_input.h"
 
-void test_no_change_without_press(void) {
-    HmiOutput o = hmi_compute({0, 0, 1});
-    TEST_ASSERT_EQUAL_UINT8(1, o.drive_mode);
-    TEST_ASSERT_FALSE(o.reset_req);
+void test_gear_maps(void) {
+    TEST_ASSERT_TRUE(Gear::N == hmi_compute({0, false, 0}).gear);
+    TEST_ASSERT_TRUE(Gear::R == hmi_compute({1, false, 0}).gear);
+    TEST_ASSERT_TRUE(Gear::D == hmi_compute({2, false, 0}).gear);
 }
-void test_mode_cycles_on_rising_edge(void) {
-    HmiOutput o = hmi_compute({0x01, 0x00, 0});   // button0 newly pressed
-    TEST_ASSERT_EQUAL_UINT8(1, o.drive_mode);
+void test_gear_out_of_range_defaults_N(void) {
+    TEST_ASSERT_TRUE(Gear::N == hmi_compute({9, false, 0}).gear);
 }
-void test_mode_wraps(void) {
-    HmiOutput o = hmi_compute({0x01, 0x00, 2});
-    TEST_ASSERT_EQUAL_UINT8(0, o.drive_mode);
+void test_paddock_passthrough(void) {
+    TEST_ASSERT_TRUE(hmi_compute({2, true, 0}).paddock);
+    TEST_ASSERT_FALSE(hmi_compute({2, false, 0}).paddock);
 }
-void test_no_cycle_when_held(void) {
-    HmiOutput o = hmi_compute({0x01, 0x01, 1});   // still held, not a new edge
-    TEST_ASSERT_EQUAL_UINT8(1, o.drive_mode);
-}
-void test_reset_on_rising_edge(void) {
-    HmiOutput o = hmi_compute({0x02, 0x00, 0});
-    TEST_ASSERT_TRUE(o.reset_req);
+void test_drive_mode_from_config(void) {
+    TEST_ASSERT_EQUAL_UINT8(2, hmi_compute({0, false, 0x02}).drive_mode);
 }
 
 void setUp(void) {}
 void tearDown(void) {}
 int main(int, char **) {
     UNITY_BEGIN();
-    RUN_TEST(test_no_change_without_press);
-    RUN_TEST(test_mode_cycles_on_rising_edge);
-    RUN_TEST(test_mode_wraps);
-    RUN_TEST(test_no_cycle_when_held);
-    RUN_TEST(test_reset_on_rising_edge);
+    RUN_TEST(test_gear_maps);
+    RUN_TEST(test_gear_out_of_range_defaults_N);
+    RUN_TEST(test_paddock_passthrough);
+    RUN_TEST(test_drive_mode_from_config);
     return UNITY_END();
 }

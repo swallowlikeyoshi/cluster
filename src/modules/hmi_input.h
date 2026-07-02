@@ -1,8 +1,13 @@
 #pragma once
 #include <cstdint>
-// [FILL-IN] Pure: button bits (+ previous bits for edge detection) -> HMI command.
+#include "cluster_command.h"
+// [FILL-IN] Pure: physical switch states -> a semantic ClusterCommand.
+// The locked core reads the switches and encodes the command to CAN.
 
-struct HmiInput  { uint16_t buttons; uint16_t prev_buttons; uint8_t cur_drive_mode; };
-struct HmiOutput { uint8_t drive_mode; bool reset_req; };
+struct HmiSwitches {
+    uint8_t  gear_raw;      // 0=N, 1=R, 2=D (other -> N)
+    bool     paddock;       // paddock-mode switch
+    uint16_t config_bits;   // other configurable switches (drive mode in low 2 bits)
+};
 
-HmiOutput hmi_compute(const HmiInput &in);
+ClusterCommand hmi_compute(const HmiSwitches &in);
