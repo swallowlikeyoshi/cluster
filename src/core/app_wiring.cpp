@@ -6,66 +6,63 @@
 #include "core/wiring.h"
 #include "state.h"
 #include "core/can_bus.h"
-#include "core/io_expander.h"
-#include "core/display_render.h"
-#include "modules/indicators.h"
-#include "modules/vess.h"
+#include "core/display_blit.h"
+#include "framebuffer.h"
 #include "modules/hmi_input.h"
-#include "modules/display.h"
+#include "modules/widgets/widget_speed.h"
+#include "modules/widgets/widget_battery.h"
+#include "modules/widgets/widget_warnings.h"
+#include "modules/widgets/widget_gear.h"
 #include <Arduino.h>
 
 // [LOCKED] The ONLY translation unit that touches `state`.
 ClusterState state;
 
 namespace {
-    constexpr int PIN_VESS = 25;          // buzzer PWM pin
-    uint16_t prev_buttons = 0;
+    // Input pins (direct GPIO; if pin count runs short, an io_expander can be
+    // reintroduced HERE only, without touching any module).
+    constexpr int PIN_GEAR_R  = 32;
+    constexpr int PIN_GEAR_D  = 33;
+    constexpr int PIN_PADDOCK = 26;
+    FrameBuffer fb;
+
+    // Map an EZkontrol gear code (state.gear, 0..7) to the widget's 0=N/1=R/2=D.
+    int gear_code(uint8_t ez) { return ez == 1 ? 1 : ez == 3 ? 2 : 0; }  // 1=R, 3=D1 -> D, else N
+}
+
+static void hmi_update() {
+    HmiSwitches sw;
+    sw.gear_raw    = digitalRead(PIN_GEAR_R) == LOW ? 1 : digitalRead(PIN_GEAR_D) == LOW ? 2 : 0;
+    sw.paddock     = digitalRead(PIN_PADDOCK) == LOW;
+    sw.config_bits = 0;
+    ClusterCommand cmd = hmi_compute(sw);
+    state.drive_mode = cmd.drive_mode;
+    state.reset_req  = false;
+    can_bus::send_command(cmd);
 }
 
 static void can_rx_update() { can_bus::poll_rx(); }
 
-static void hmi_update() {
-    uint16_t buttons = io_expander::read_inputs();
-    HmiOutput o = hmi_compute({ buttons, prev_buttons, state.drive_mode });
-    prev_buttons = buttons;
-    if (o.drive_mode != state.drive_mode || o.reset_req) {
-        state.drive_mode = o.drive_mode;
-        state.reset_req  = o.reset_req;
-        can_bus::send_command(o.reset_req ? 2 : 1, o.drive_mode);  // 2=reset,1=set mode
-        state.reset_req = false;
-    }
-}
-
-static void indicators_update() {
-    uint16_t bits = indicators_compute({ state.error1, state.hv_active, state.brake });
-    io_expander::write_outputs(bits);
-}
-
-static void vess_update() {
-    int hz = vess_compute({ state.speed_rpm, state.hv_active });
-    if (hz > 0) ledcWriteTone(0, hz); else ledcWrite(0, 0);
-}
-
 static void display_update() {
-    DisplayModel m = display_compute({
-        state.speed_rpm, state.soc, state.controller_temp, state.motor_temp,
-        state.error1, state.hv_active });
-    display::render(m);
+    fb.clear();
+    widget_speed_draw(fb,    10,  10, (int)state.speed_rpm);
+    widget_battery_draw(fb,  10, 120, (int)(state.soc * 100.0f));
+    widget_warnings_draw(fb, 250, 10, state.error1 != 0, state.hv_active);
+    widget_gear_draw(fb,     270, 110, gear_code(state.gear));
+    display_blit::show(fb);
 }
 
 Task g_tasks[] = {
-    { can_rx_update,     5, 0 },   // 200 Hz drain
-    { hmi_update,       20, 0 },   // 50 Hz
-    { indicators_update,50, 0 },   // 20 Hz
-    { vess_update,      20, 0 },   // 50 Hz
-    { display_update,  100, 0 },   // 10 Hz
+    { can_rx_update,   5, 0 },   // 200 Hz drain
+    { hmi_update,     20, 0 },   // 50 Hz
+    { display_update, 66, 0 },   // ~15 Hz
 };
 const int G_TASK_COUNT = sizeof(g_tasks) / sizeof(g_tasks[0]);
 
 void modules_init() {
+    pinMode(PIN_GEAR_R,  INPUT_PULLUP);
+    pinMode(PIN_GEAR_D,  INPUT_PULLUP);
+    pinMode(PIN_PADDOCK, INPUT_PULLUP);
     can_bus::begin();
-    io_expander::begin();
-    display::begin();
-    ledcSetup(0, 2000, 8);     // buzzer PWM channel 0
-    ledcAttachPin(PIN_VESS, 0);
+    display_blit::begin();
 }
