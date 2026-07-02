@@ -39,7 +39,7 @@ pio run -e esp32dev -t upload
 |------|------|-------|
 | `src/modules/` | 순수 계산 함수 `xxx_compute()` | ✅ **여기서만** |
 | `test/` | 노트북 단위 테스트 | ✅ |
-| `src/core/`, `src/logic/`, `include/` | CAN·io_expander·display·스케줄러·타입 | 🔒 잠김 |
+| `src/core/`, `src/logic/`, `include/` | CAN·framebuffer·display_blit·스케줄러·타입 | 🔒 잠김 |
 | `platformio.ini`, `src/main.cpp` | 빌드 설정·진입점 | 🔒 잠김 |
 
 새 모듈을 추가하거나 기존 `compute()`를 채우는 법 → [`docs/ADDING_A_MODULE.md`](docs/ADDING_A_MODULE.md)
