@@ -8,9 +8,9 @@
 
 ## 한눈에
 
-- **스택**: PlatformIO + Arduino-ESP32, TWAI(CAN), U8g2(128×64 OLED), MCP23017(I/O 확장)
-- **구조**: 잠긴 코어(CAN·디스플레이·IO) + 팀원이 채우는 순수 모듈(`src/modules/`). VCU와 **동일한 2층 설계**지만 안전 FSM·50ms 라이프 태스크가 없고 CAN은 **수신(RX) 위주**입니다.
-- **상태**: ESP32 빌드 그린, 호스트 테스트 31개 통과
+- **스택**: PlatformIO + Arduino-ESP32, TWAI(CAN). 화면은 **패널 독립적 1bpp 프레임버퍼**(위젯이 그림) + `display_blit`(패널 확정 후 구현)
+- **구조**: 잠긴 코어(CAN·프레임버퍼·blit) + 팀원이 채우는 순수 모듈(`src/modules/`). VCU와 **동일한 2층 설계**지만 안전 FSM·50ms 라이프 태스크가 없고 CAN은 **수신(RX) 위주**입니다.
+- **상태**: ESP32 빌드 그린, 호스트 테스트 38개 통과
 
 ## 빠른 시작
 
@@ -65,4 +65,4 @@ pio run -e esp32dev -t upload
 ## 아직 미구현 (의도된 TODO)
 
 - **CAN RX 파싱** — `src/core/can_bus.cpp` `poll_rx()` 스텁. `docs/CAN_PROTOCOL.md` §7의 수신 경로(METER 직수신 vs VCU 게이트웨이) 결정 후 구현하면 계기판에 실제 값이 표시됩니다.
-- **OLED 컨트롤러 확정** — `display_render.cpp`가 SSD1309를 가정. 실제 2.42" 패널 확인 후 U8g2 생성자 조정 필요.
+- **디스플레이 blit 구현** — `src/core/display_blit.cpp`의 `show()`가 stub. 실제 패널(OLED/LCD) 확정 후 1bpp 프레임버퍼를 패널로 내보내는 코드 작성 필요.
