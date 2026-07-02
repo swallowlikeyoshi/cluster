@@ -17,3 +17,10 @@ float raw_to_voltage(uint16_t raw) { return (float)raw * 0.1f; }
 float raw_to_current(uint16_t raw) { return (float)raw * 0.1f - 3200.0f; }
 int   raw_to_temp(uint8_t raw)     { return (int)raw - 40; }
 int   raw_to_speed(uint16_t raw)   { return (int)raw - 32000; }
+
+void encode_cluster_command(const ClusterCommand &cmd, uint8_t out[8]) {
+    for (int i = 0; i < 8; i++) out[i] = 0;
+    out[0] = (uint8_t)cmd.gear;         // 0=N,1=R,2=D
+    out[1] = cmd.drive_mode;
+    out[2] = cmd.paddock ? 0x01 : 0x00;
+}
