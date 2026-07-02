@@ -4,6 +4,8 @@
 여러분은 `src/modules/` 안의 `*_compute()` 함수만 작성합니다.
 CAN 수신·디스플레이·IO는 코어가 처리합니다. (Cluster는 안전 FSM/라이프 태스크가 없습니다.)
 
+> 계기판 **화면 위젯**을 추가하려면 → `ADDING_A_WIDGET.md` 를 보세요.
+
 ## 규칙 (꼭 지키기)
 - 모듈 파일(`src/modules/*`)에서 `state.h` 와 `<Arduino.h>` 를 **include 하지 않는다.**
 - 값은 `types.h` 의 도메인 타입(`Percent`, `Unit`, `Rpm` ...)으로 받고 돌려준다 — 범위가 자동으로 지켜진다.

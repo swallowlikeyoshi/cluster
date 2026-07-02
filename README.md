@@ -46,12 +46,11 @@ pio run -e esp32dev -t upload
 
 ## 모듈 목록 (FILL-IN)
 
-- `indicators` — 에러/HV/브레이크 → 경고등 비트마스크
-- `vess` — 속도 → 경고음 주파수 (규정 제12조: 70dB↑ 단순음)
-- `hmi_input` — 버튼 → 주행모드/리셋 커맨드
-- `display` — 차량상태 → 화면 뷰모델 (실제 그리기는 잠긴 U8g2 렌더러가 담당)
+- `hmi_input` — 스위치(기어·패독·config) → `ClusterCommand` (CAN으로 VCU에 전송)
+- `widgets/` — 계기판 화면 위젯 (speed·battery·warnings·gear ...). 1bpp 프레임버퍼에 그림.
+  새 위젯 추가법: `docs/ADDING_A_WIDGET.md`
 
-각 모듈은 `xxx_compute(입력) → 출력` 순수 함수. 하드웨어·전역상태를 모릅니다.
+> 표시는 패널 독립적 **1bpp 프레임버퍼**로. 실제 패널 blit(`display_blit`)은 하드웨어 확정 후 구현.
 
 ## 문서
 
