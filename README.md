@@ -16,7 +16,7 @@
 
 ```bash
 # 1. 이 레포를 깨끗한 위치에 클론
-git clone https://github.com/swallowlikeyoshi/cluster.git
+git clone https://github.com/2026-HEVEN/cluster.git
 cd cluster
 
 # 2. PlatformIO 설치 (한 번만) — VS Code면 PlatformIO IDE 확장 설치로 대체 가능
@@ -60,7 +60,7 @@ pio run -e esp32dev -t upload
 | [`docs/ADDING_A_MODULE.md`](docs/ADDING_A_MODULE.md) | 모듈 추가/작성 절차 |
 | [`docs/CAN_PROTOCOL.md`](docs/CAN_PROTOCOL.md) | CAN 메시지 명세 (VCU/Cluster 공유 단일 출처) |
 
-> 전체 설계 원리(compute/update 분리, state 격리, 테스트 등)는 **VCU 레포의 [`ARCHITECTURE.md`](https://github.com/swallowlikeyoshi/vcu/blob/main/docs/ARCHITECTURE.md)** 와 동일합니다.
+> 전체 설계 원리(compute/update 분리, state 격리, 테스트 등)는 **VCU 레포의 [`ARCHITECTURE.md`](https://github.com/2026-HEVEN/vcu/blob/main/docs/ARCHITECTURE.md)** 와 동일합니다.
 
 ## 아직 미구현 (의도된 TODO)
 
@@ -69,7 +69,7 @@ pio run -e esp32dev -t upload
 
 ## 버전 기록 (Changelog)
 
-> 각 버전은 git 태그로도 관리됩니다 → [GitHub Releases](https://github.com/swallowlikeyoshi/cluster/releases)
+> 각 버전은 git 태그로도 관리됩니다 → [GitHub Releases](https://github.com/2026-HEVEN/cluster/releases)
 > **새 버전 올릴 때:** 아래에 항목 추가 → `git tag vX.Y` → `git push origin vX.Y`.
 
 ### v1.1 (2026-06-29) — 디스플레이 프레임버퍼 재설계
