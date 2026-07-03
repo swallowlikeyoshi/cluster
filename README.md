@@ -66,3 +66,18 @@ pio run -e esp32dev -t upload
 
 - **CAN RX 파싱** — `src/core/can_bus.cpp` `poll_rx()` 스텁. `docs/CAN_PROTOCOL.md` §7의 수신 경로(METER 직수신 vs VCU 게이트웨이) 결정 후 구현하면 계기판에 실제 값이 표시됩니다.
 - **디스플레이 blit 구현** — `src/core/display_blit.cpp`의 `show()`가 stub. 실제 패널(OLED/LCD) 확정 후 1bpp 프레임버퍼를 패널로 내보내는 코드 작성 필요.
+
+## 버전 기록 (Changelog)
+
+> 각 버전은 git 태그로도 관리됩니다 → [GitHub Releases](https://github.com/swallowlikeyoshi/cluster/releases)
+> **새 버전 올릴 때:** 아래에 항목 추가 → `git tag vX.Y` → `git push origin vX.Y`.
+
+### v1.1 (2026-06-29) — 디스플레이 프레임버퍼 재설계
+- 패널 독립적 **1bpp 프레임버퍼**(320×160) + 위젯 모듈(speed · battery · warnings · gear) 도입 — 렌더링을 모듈로 넘겨 자유도↑, host 테스트 가능(ASCII 시각화)
+- `hmi_input` → **`ClusterCommand`**(gear · drive_mode · **paddock**) 의미 커맨드 패턴, **패독 모드** 추가
+- **제거**: `vess`, `indicators`, `display_render`(U8g2), `io_expander`(MCP23017)
+- `display_blit` stub(패널 확정 후 구현), CAN 커맨드 레이아웃(`CAN_PROTOCOL.md` §5.7) 갱신
+
+### v1.0 (2026-06-29) — 초기 Cluster 펌웨어 베이스
+- 잠긴 코어(CAN RX · MCP23017 · U8g2 OLED) + 순수 모듈(display · indicators · vess · hmi_input)
+- PlatformIO native 테스트, AGENTS/ADDING_A_MODULE/CAN_PROTOCOL 문서
