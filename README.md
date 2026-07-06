@@ -10,7 +10,7 @@
 
 - **스택**: PlatformIO + Arduino-ESP32, TWAI(CAN). 화면은 **패널 독립적 1bpp 프레임버퍼**(위젯이 그림) + `display_blit`(패널 확정 후 구현)
 - **구조**: 잠긴 코어(CAN·프레임버퍼·blit) + 팀원이 채우는 순수 모듈(`src/modules/`). VCU와 **동일한 2층 설계**지만 안전 FSM·50ms 라이프 태스크가 없고 CAN은 **수신(RX) 위주**입니다.
-- **상태**: ESP32 빌드 그린, 호스트 테스트 38개 통과
+- **상태**: ESP32 빌드 그린, 호스트 테스트 39개 통과
 
 ## 빠른 시작
 
@@ -71,6 +71,10 @@ pio run -e esp32dev -t upload
 
 > 각 버전은 git 태그로도 관리됩니다 → [GitHub Releases](https://github.com/2026-HEVEN/cluster/releases)
 > **새 버전 올릴 때:** 아래에 항목 추가 → `git tag vX.Y` → `git push origin vX.Y`.
+
+### v1.1.1 (2026-07-06) — 위젯 레이아웃 렌더 테스트
+- `test/test_render_layout`: `app_wiring.cpp`의 위젯 배치를 그대로 재현해 24bit BMP로 덤프하는 시각화 테스트 추가. `pio test -e native -f test_render_layout` 로 실행 → `render_layout.bmp` 생성(Windows 사진 앱/그림판 등 추가 도구 없이 바로 열림), 위젯별 할당 공간을 박스로 표시
+- `.gitignore`에 `*.bmp` 추가
 
 ### v1.1 (2026-06-29) — 디스플레이 프레임버퍼 재설계
 - 패널 독립적 **1bpp 프레임버퍼**(320×160) + 위젯 모듈(speed · battery · warnings · gear) 도입 — 렌더링을 모듈로 넘겨 자유도↑, host 테스트 가능(ASCII 시각화)
