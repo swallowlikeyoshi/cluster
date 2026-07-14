@@ -3,3 +3,4 @@
 *.bin
 *.elf
 *.bmp
+.DS_Store
