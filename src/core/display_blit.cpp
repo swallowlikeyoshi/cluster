@@ -9,6 +9,7 @@ namespace display_blit {
 
 void begin() {
     // TODO(core): init the chosen panel (SPI/I2C) once hardware is selected.
+    // 코어 수정 테스트
 }
 
 void show(const FrameBuffer &fb) {
