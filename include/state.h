@@ -9,7 +9,7 @@
 // Module files (src/modules/*) must never include state.h.
 
 struct ClusterState {
-    // received vehicle state (from CAN)
+    // received vehicle state (from CAN, Controller_L — sniffed off VCU feedback frames)
     float    speed_rpm    = 0.0f;
     float    bus_voltage  = 0.0f;   // V
     float    bus_current  = 0.0f;   // A
@@ -17,6 +17,13 @@ struct ClusterState {
     int      controller_temp = 0;   // C
     int      motor_temp      = 0;   // C
     uint8_t  error1 = 0, error2 = 0, error3 = 0;   // raw error bitmaps
+    // Controller_R mirror of the above (dual motor — see CAN_PROTOCOL.md §7)
+    float    speed_rpm_r    = 0.0f;
+    float    bus_voltage_r  = 0.0f;
+    float    bus_current_r  = 0.0f;
+    int      controller_temp_r = 0;
+    int      motor_temp_r      = 0;
+    uint8_t  error1_r = 0, error2_r = 0, error3_r = 0;
     uint8_t  gear   = 0;            // 0..7
     bool     brake     = false;
     bool     hv_active = false;

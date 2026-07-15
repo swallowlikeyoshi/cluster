@@ -7,6 +7,8 @@ void test_state_defaults_safe(void) {
     TEST_ASSERT_FALSE(s.hv_active);
     TEST_ASSERT_FALSE(s.handshaked);
     TEST_ASSERT_EQUAL_UINT8(0, s.error1);
+    TEST_ASSERT_EQUAL_FLOAT(0.0f, s.speed_rpm_r);
+    TEST_ASSERT_EQUAL_UINT8(0, s.error1_r);
 }
 
 void setUp(void) {}

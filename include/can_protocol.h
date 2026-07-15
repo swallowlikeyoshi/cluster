@@ -28,9 +28,12 @@ uint16_t torque_to_raw(float amps);
 float    raw_to_torque(uint16_t raw);
 
 // --- Cluster additions (mirror back into the VCU repo's can_protocol.h) ---
-// MCU -> VCU feedback (Controller_L). Controller_R replaces SA 0xEF with 0xF0.
-constexpr uint32_t CAN_ID_FB1_L = 0x1801D0EF;   // Part I: voltage/current/speed
-constexpr uint32_t CAN_ID_FB2_L = 0x1802D0EF;   // Part II: temps/status/errors
+// MCU -> VCU feedback, sniffed passively off the shared bus (controllers stay
+// in VCU mode; Cluster does not gateway/rebroadcast — see CAN_PROTOCOL.md §7).
+constexpr uint32_t CAN_ID_FB1_L = 0x1801D0EF;   // Part I: voltage/current/speed (Controller_L)
+constexpr uint32_t CAN_ID_FB2_L = 0x1802D0EF;   // Part II: temps/status/errors (Controller_L)
+constexpr uint32_t CAN_ID_FB1_R = 0x1801D0F0;   // Part I (Controller_R)
+constexpr uint32_t CAN_ID_FB2_R = 0x1802D0F0;   // Part II (Controller_R)
 // Cluster -> VCU command (config/reset). HEVEN-defined.
 constexpr uint32_t CAN_ID_CLUSTER_CMD = 0x1801D0C0;
 
