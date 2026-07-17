@@ -28,12 +28,25 @@ namespace {
     constexpr int PIN_GEAR_D  = 33;
     constexpr int PIN_PADDOCK = 26;
     constexpr int PIN_LCD_ACTION = 27;
+    constexpr uint32_t CAN_STARTUP_GRACE_MS = 3000;
+    constexpr uint32_t CONTROLLER_FRAME_TIMEOUT_MS = 300;
+    constexpr uint32_t VCU_STATUS_TIMEOUT_MS = 300;
     FrameBuffer fb;
     bool warning_detail_page = false;
     bool warning_button_down = false;
     uint32_t warning_button_last_ms = 0;
 
     int gear_code(uint8_t gear) { return gear <= 3 ? gear : 0; }
+
+    float absf(float v) { return v < 0.0f ? -v : v; }
+
+    bool frame_fresh(uint32_t last_ms, uint32_t now, uint32_t timeout_ms) {
+        return last_ms != 0 && (now - last_ms) <= timeout_ms;
+    }
+
+    bool frame_stale(uint32_t last_ms, uint32_t now, uint32_t timeout_ms) {
+        return !frame_fresh(last_ms, now, timeout_ms);
+    }
 
     uint8_t command_gear_code(Gear gear) {
         switch (gear) {
@@ -43,9 +56,31 @@ namespace {
         }
     }
 
-    bool warning_active() {
+    bool controller_fault_active() {
         return state.error1 || state.error2 || state.error3 ||
                state.error1_r || state.error2_r || state.error3_r;
+    }
+
+    bool controller_feedback_stale(uint32_t now) {
+        if (now < CAN_STARTUP_GRACE_MS) return false;
+        return frame_stale(state.controller_l_fb1_last_ms, now, CONTROLLER_FRAME_TIMEOUT_MS) ||
+               frame_stale(state.controller_l_fb2_last_ms, now, CONTROLLER_FRAME_TIMEOUT_MS) ||
+               frame_stale(state.controller_r_fb1_last_ms, now, CONTROLLER_FRAME_TIMEOUT_MS) ||
+               frame_stale(state.controller_r_fb2_last_ms, now, CONTROLLER_FRAME_TIMEOUT_MS);
+    }
+
+    bool vcu_status_stale(uint32_t now) {
+        return state.vcu_cluster_status_last_ms != 0 &&
+               frame_stale(state.vcu_cluster_status_last_ms, now, VCU_STATUS_TIMEOUT_MS);
+    }
+
+    bool can_link_warning_active(uint32_t now) {
+        return controller_feedback_stale(now) || vcu_status_stale(now);
+    }
+
+    bool warning_active() {
+        const uint32_t now = millis();
+        return controller_fault_active() || can_link_warning_active(now);
     }
 
     bool bit_any(uint8_t left, uint8_t right, uint8_t bit) {
@@ -64,6 +99,7 @@ namespace {
     void draw_warning_detail() {
         const char *labels[8];
         int count = 0;
+        const uint32_t now = millis();
 
         if (bit_any(state.error1, state.error1_r, 2)) add_warning(labels, count, "OVER VOLT");
         if (bit_any(state.error1, state.error1_r, 3)) add_warning(labels, count, "LOW VOLT");
@@ -71,7 +107,9 @@ namespace {
         if (bit_any(state.error1, state.error1_r, 5)) add_warning(labels, count, "MOTOR HOT");
         if (state.error1 || state.error2 || state.error3) add_warning(labels, count, "LEFT FAULT");
         if (state.error1_r || state.error2_r || state.error3_r) add_warning(labels, count, "RIGHT FAULT");
-        if (bit_any(state.error3, state.error3_r, 4)) add_warning(labels, count, "CAN ERR");
+        if (bit_any(state.error3, state.error3_r, 4) || can_link_warning_active(now)) {
+            add_warning(labels, count, "CAN ERR");
+        }
         if (count == 0) add_warning(labels, count, "FAULT");
 
         fb_text(fb, 18, 14, "WARNING", 5);
@@ -115,9 +153,36 @@ namespace {
             }
         }
     }
+
+    void refresh_can_timeouts() {
+        const uint32_t now = millis();
+        const bool left_speed_fresh =
+            frame_fresh(state.controller_l_fb1_last_ms, now, CONTROLLER_FRAME_TIMEOUT_MS);
+        const bool right_speed_fresh =
+            frame_fresh(state.controller_r_fb1_last_ms, now, CONTROLLER_FRAME_TIMEOUT_MS);
+
+        if (now >= CAN_STARTUP_GRACE_MS) {
+            if (left_speed_fresh && right_speed_fresh) {
+                state.speed_rpm = (absf(state.speed_rpm_l) + absf(state.speed_rpm_r)) * 0.5f;
+            } else if (left_speed_fresh) {
+                state.speed_rpm = absf(state.speed_rpm_l);
+            } else if (right_speed_fresh) {
+                state.speed_rpm = absf(state.speed_rpm_r);
+            } else {
+                state.speed_rpm = 0.0f;
+            }
+        }
+
+        if (state.gear_from_can && vcu_status_stale(now)) {
+            state.gear_from_can = false;
+            state.brake = false;
+            state.hv_active = false;
+        }
+    }
 }
 
 static void hmi_update() {
+    refresh_can_timeouts();
     lcd_action_update();
 
     HmiSwitches sw;

@@ -23,6 +23,8 @@ struct ClusterState {
     uint8_t  controller_status = 0; // raw MCU->VCU status byte
     uint8_t  error1 = 0, error2 = 0, error3 = 0;   // raw error bitmaps
     bool     controller_l_seen = false;
+    uint32_t controller_l_fb1_last_ms = 0;
+    uint32_t controller_l_fb2_last_ms = 0;
     // Controller_R mirror of the above (dual motor — see CAN_PROTOCOL.md §7)
     float    speed_rpm_r    = 0.0f;
     float    bus_voltage_r  = 0.0f;
@@ -32,8 +34,11 @@ struct ClusterState {
     uint8_t  controller_status_r = 0;
     uint8_t  error1_r = 0, error2_r = 0, error3_r = 0;
     bool     controller_r_seen = false;
+    uint32_t controller_r_fb1_last_ms = 0;
+    uint32_t controller_r_fb2_last_ms = 0;
     uint8_t  gear   = 0;            // display gear: 0=N, 1=R, 2=D, 3=P
     bool     gear_from_can = false; // true after VCU-confirmed status arrives
+    uint32_t vcu_cluster_status_last_ms = 0;
     bool     brake     = false;
     bool     hv_active = false;
     bool     handshaked = false;

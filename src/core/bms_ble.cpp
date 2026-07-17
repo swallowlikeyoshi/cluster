@@ -28,6 +28,15 @@ uint16_t u16le(const uint8_t *d) {
     return (uint16_t)(d[0] | ((uint16_t)d[1] << 8));
 }
 
+bool checksum_ok(const uint8_t *f, int len) {
+    if (len < 8) return false;
+    uint16_t sum = 0;
+    for (int i = 1; i < len - 4; ++i) {
+        sum = (uint16_t)(sum + f[i]);
+    }
+    return u16le(f + len - 4) == sum;
+}
+
 int expected_frame_len(uint8_t id) {
     switch (id) {
         case 0x24: return 36;  // 14 cell voltages
@@ -41,6 +50,7 @@ int expected_frame_len(uint8_t id) {
 
 void mark_disconnected() {
     write_ch = nullptr;
+    frame_len_used = 0;
     state.bms_ble_connected = false;
     if (millis() - state.bms_last_rx_ms > STALE_MS) {
         state.soc_valid = false;
@@ -91,7 +101,8 @@ void feed_byte(uint8_t b) {
     }
     if (frame_len_used < want) return;
 
-    if (frame_buf[want - 2] == 0x0D && frame_buf[want - 1] == 0x0A) {
+    if (frame_buf[want - 2] == 0x0D && frame_buf[want - 1] == 0x0A &&
+        checksum_ok(frame_buf, want)) {
         handle_frame(frame_buf);
     }
     frame_len_used = 0;
@@ -124,8 +135,7 @@ void poll_frame(uint8_t id) {
 }
 
 bool matches_bms(NimBLEAdvertisedDevice &dev) {
-    if (dev.haveName() && dev.getName() == BMS_NAME) return true;
-    return dev.isAdvertisingService(SVC);
+    return dev.haveName() && dev.getName() == BMS_NAME;
 }
 
 bool connect_device(NimBLEAdvertisedDevice &dev) {
@@ -159,7 +169,8 @@ bool connect_device(NimBLEAdvertisedDevice &dev) {
         return false;
     }
 
-    state.bms_ble_connected = true;
+    state.bms_ble_connected = false;
+    frame_len_used = 0;
     send_handshake();
     poll_frame(0x2A);
     last_summary_poll_ms = millis();
@@ -211,8 +222,10 @@ void poll() {
         return;
     }
 
-    state.bms_ble_connected = true;
-    if (state.bms_last_rx_ms != 0 && now - state.bms_last_rx_ms > STALE_MS) {
+    const bool summary_fresh =
+        state.bms_last_rx_ms != 0 && now - state.bms_last_rx_ms <= STALE_MS;
+    state.bms_ble_connected = summary_fresh;
+    if (!summary_fresh) {
         state.soc_valid = false;
     }
 

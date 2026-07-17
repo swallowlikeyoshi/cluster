@@ -78,26 +78,32 @@ void poll_rx() {
     twai_message_t m;
     while (twai_receive(&m, 0) == ESP_OK) {
         if (!m.extd || m.data_length_code < 8) continue;
+        const uint32_t now = millis();
         switch (m.identifier) {
             case CAN_ID_FB1_L:
                 decode_fb1(m.data, state.bus_voltage, state.bus_current, state.speed_rpm_l);
                 state.controller_l_seen = true;
+                state.controller_l_fb1_last_ms = now;
                 update_display_rpm();
                 break;
             case CAN_ID_FB1_R:
                 decode_fb1(m.data, state.bus_voltage_r, state.bus_current_r, state.speed_rpm_r);
                 state.controller_r_seen = true;
+                state.controller_r_fb1_last_ms = now;
                 update_display_rpm();
                 break;
             case CAN_ID_FB2_L:
                 decode_fb2(m.data, state.controller_temp, state.motor_temp,
                            state.controller_status, state.error1, state.error2, state.error3);
+                state.controller_l_fb2_last_ms = now;
                 break;
             case CAN_ID_FB2_R:
                 decode_fb2(m.data, state.controller_temp_r, state.motor_temp_r,
                            state.controller_status_r, state.error1_r, state.error2_r, state.error3_r);
+                state.controller_r_fb2_last_ms = now;
                 break;
             case CAN_ID_VCU_CLUSTER_STATUS:
+                state.vcu_cluster_status_last_ms = now;
                 decode_vcu_cluster_status(m.data);
                 break;
             default:

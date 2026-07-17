@@ -15,6 +15,7 @@ constexpr int GPS_LINE_MAX = 96;
 constexpr float START_RADIUS_M = 8.0f;
 constexpr float REARM_RADIUS_M = 20.0f;
 constexpr uint32_t MIN_LAP_MS = 10000;
+constexpr uint32_t GPS_FIX_TIMEOUT_MS = 3000;
 
 HardwareSerial gps_serial(2);
 char line[GPS_LINE_MAX];
@@ -30,6 +31,7 @@ double start_lon = 0.0;
 double latest_lat = 0.0;
 double latest_lon = 0.0;
 uint32_t last_cross_ms = 0;
+uint32_t last_fix_ms = 0;
 
 int hex_value(char c) {
     if (c >= '0' && c <= '9') return c - '0';
@@ -79,6 +81,7 @@ void update_lap(double lat, double lon) {
     latest_fix = true;
     latest_lat = lat;
     latest_lon = lon;
+    last_fix_ms = now;
 
     if (!have_start) {
         return;
@@ -136,6 +139,7 @@ void parse_rmc(char *sentence) {
     if (fields[2][0] != 'A') {
         state.gps_fix_ok = false;
         latest_fix = false;
+        last_fix_ms = 0;
         return;
     }
 
@@ -168,6 +172,11 @@ void begin() {
 void poll() {
     while (gps_serial.available() > 0) {
         consume_char((char)gps_serial.read());
+    }
+
+    if (latest_fix && millis() - last_fix_ms > GPS_FIX_TIMEOUT_MS) {
+        state.gps_fix_ok = false;
+        latest_fix = false;
     }
 }
 
