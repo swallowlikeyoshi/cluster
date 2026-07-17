@@ -9,21 +9,54 @@
 // Module files (src/modules/*) must never include state.h.
 
 struct ClusterState {
-    // received vehicle state (from CAN)
+    // received vehicle state (from CAN, sniffed off VCU feedback frames)
+    // speed_rpm is the LCD/display aggregate: abs(left) until both sides are
+    // seen, then avg(abs(left), abs(right)).
     float    speed_rpm    = 0.0f;
+    float    speed_rpm_l  = 0.0f;
     float    bus_voltage  = 0.0f;   // V
     float    bus_current  = 0.0f;   // A
     float    soc          = 0.0f;   // 0..1
+    bool     soc_valid    = false;  // false until BMS/VCU provides real SOC
     int      controller_temp = 0;   // C
     int      motor_temp      = 0;   // C
+    uint8_t  controller_status = 0; // raw MCU->VCU status byte
     uint8_t  error1 = 0, error2 = 0, error3 = 0;   // raw error bitmaps
-    uint8_t  gear   = 0;            // 0..7
+    bool     controller_l_seen = false;
+    // Controller_R mirror of the above (dual motor — see CAN_PROTOCOL.md §7)
+    float    speed_rpm_r    = 0.0f;
+    float    bus_voltage_r  = 0.0f;
+    float    bus_current_r  = 0.0f;
+    int      controller_temp_r = 0;
+    int      motor_temp_r      = 0;
+    uint8_t  controller_status_r = 0;
+    uint8_t  error1_r = 0, error2_r = 0, error3_r = 0;
+    bool     controller_r_seen = false;
+    uint8_t  gear   = 0;            // display gear: 0=N, 1=R, 2=D, 3=P
+    bool     gear_from_can = false; // true after VCU-confirmed status arrives
     bool     brake     = false;
     bool     hv_active = false;
     bool     handshaked = false;
     // HMI outputs (sent to VCU)
     uint8_t  drive_mode = 0;        // 0 Normal, 1 Efficiency, 2 Sport
     bool     reset_req  = false;
+
+    // BMS telemetry (display-only). BMS data may arrive directly over BLE
+    // or through a future VCU summary frame; it must not be used for safety
+    // decisions in Cluster firmware.
+    bool     bms_ble_connected = false;
+    uint32_t bms_last_rx_ms    = 0;
+    float    bms_pack_voltage  = 0.0f;  // V
+    float    bms_current       = 0.0f;  // A, sign convention not yet verified
+    int      bms_temp_c        = 0;
+    uint32_t bms_remaining_mah = 0;
+    uint8_t  bms_soh           = 0;
+    uint16_t bms_cycles        = 0;
+    // GPS lap timer
+    bool     gps_fix_ok     = false;
+    uint8_t  lap_count      = 0;
+    uint32_t current_lap_ms = 0;
+    uint32_t last_lap_ms    = 0;
 };
 
 extern ClusterState state;   // defined in core/app_wiring.cpp

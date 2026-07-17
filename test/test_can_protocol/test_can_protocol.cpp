@@ -6,9 +6,19 @@
 void test_torque_offset(void) { TEST_ASSERT_EQUAL_UINT16(32000, torque_to_raw(0.0f)); }
 // Cluster additions
 void test_cluster_cmd_id(void) { TEST_ASSERT_EQUAL_HEX32(0x1801D0C0, CAN_ID_CLUSTER_CMD); }
+void test_vcu_cluster_status_id(void) { TEST_ASSERT_EQUAL_HEX32(0x1801C0D0, CAN_ID_VCU_CLUSTER_STATUS); }
 void test_feedback_ids(void) {
     TEST_ASSERT_EQUAL_HEX32(0x1801D0EF, CAN_ID_FB1_L);
     TEST_ASSERT_EQUAL_HEX32(0x1802D0EF, CAN_ID_FB2_L);
+    TEST_ASSERT_EQUAL_HEX32(0x1801D0F0, CAN_ID_FB1_R);
+    TEST_ASSERT_EQUAL_HEX32(0x1802D0F0, CAN_ID_FB2_R);
+}
+// guards against a copy-paste mistake reusing the same ID for L and R
+void test_feedback_ids_lr_distinct(void) {
+    TEST_ASSERT_NOT_EQUAL(CAN_ID_FB1_L, CAN_ID_FB1_R);
+    TEST_ASSERT_NOT_EQUAL(CAN_ID_FB2_L, CAN_ID_FB2_R);
+    TEST_ASSERT_NOT_EQUAL(CAN_ID_FB1_L, CAN_ID_FB2_L);
+    TEST_ASSERT_NOT_EQUAL(CAN_ID_FB1_R, CAN_ID_FB2_R);
 }
 void test_decode_voltage(void) { TEST_ASSERT_FLOAT_WITHIN(0.01f, 48.0f, raw_to_voltage(480)); }   // 0.1V/bit
 void test_decode_current(void) { TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, raw_to_current(32000)); }    // 0.1A/bit, -3200
@@ -35,7 +45,9 @@ int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_torque_offset);
     RUN_TEST(test_cluster_cmd_id);
+    RUN_TEST(test_vcu_cluster_status_id);
     RUN_TEST(test_feedback_ids);
+    RUN_TEST(test_feedback_ids_lr_distinct);
     RUN_TEST(test_decode_voltage);
     RUN_TEST(test_decode_current);
     RUN_TEST(test_decode_temp);

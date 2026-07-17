@@ -9,7 +9,7 @@
 // the locked display_blit pushes it to the physical panel.
 
 constexpr int FB_W = 320;
-constexpr int FB_H = 160;
+constexpr int FB_H = 240;
 constexpr int FB_STRIDE = FB_W / 8;   // 40 bytes per row
 
 struct FrameBuffer {

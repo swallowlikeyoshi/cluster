@@ -8,6 +8,7 @@
 #include "modules/widgets/widget_battery.h"
 #include "modules/widgets/widget_warnings.h"
 #include "modules/widgets/widget_gear.h"
+#include "modules/widgets/widget_laptime.h"
 #include <cstdio>
 #include <cstdint>
 #include <vector>
@@ -46,6 +47,26 @@ void write_bmp(const char *path, int w, int h, const std::vector<uint8_t> &rgb) 
     std::fclose(f);
 }
 
+void render_framebuffer(std::vector<uint8_t> &rgb, const FrameBuffer &fb,
+                        int scale, bool warning_screen) {
+    const int W = FB_W * scale;
+    const int H = FB_H * scale;
+    rgb.assign((size_t)W * H * 3, 0);
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
+            const bool on = fb.get(x / scale, y / scale);
+            const size_t i = ((size_t)y * W + x) * 3;
+            if (on) {
+                rgb[i] = rgb[i + 1] = rgb[i + 2] = 255;
+            } else if (warning_screen) {
+                rgb[i] = 255;
+                rgb[i + 1] = 0;
+                rgb[i + 2] = 0;
+            }
+        }
+    }
+}
+
 }  // namespace
 
 void test_render_layout_writes_bmp(void) {
@@ -53,42 +74,40 @@ void test_render_layout_writes_bmp(void) {
     fb.clear();
 
     // Same calls/coordinates as src/core/app_wiring.cpp display_update()
-    widget_speed_draw(fb,    10,  10, 87);
-    widget_battery_draw(fb,  10, 120, 62);
-    widget_warnings_draw(fb, 250, 10, true, true);
-    widget_gear_draw(fb,     270, 110, 2 /* D */);
-
-    // Bounding boxes sized to worst-case content per widget.
-    struct Box { int x, y, w, h; };
-    Box boxes[] = {
-        {10,  10,  96, 28},    // speed:    4 digits @ scale4
-        {10, 120,  96, 12},    // battery:  bar(60x12) + "100%" @ scale1
-        {250, 10,  36, 16},    // warnings: two 16x16 boxes, 20px pitch
-        {270, 110, 18, 21},    // gear:     1 char @ scale3
-    };
-    for (auto &b : boxes) fb_rect(fb, b.x - 2, b.y - 2, b.w + 4, b.h + 4, false, true);
+    widget_speed_draw(fb,    10,  10, 1600);
+    widget_gear_draw(fb,     289,  16, 2 /* D */);
+    widget_battery_draw(fb, 285,  48, -1);
+    widget_laptime_draw(fb,  10, 145, 2, 85670, true);
+    widget_warnings_draw(fb, 220, 188, false, true);
 
     const int SCALE = 3;
     int W = FB_W * SCALE, H = FB_H * SCALE;
-    std::vector<uint8_t> rgb((size_t)W * H * 3);
-    for (int y = 0; y < H; y++) {
-        for (int x = 0; x < W; x++) {
-            bool on = fb.get(x / SCALE, y / SCALE);
-            uint8_t v = on ? 0 : 255;
-            size_t i = ((size_t)y * W + x) * 3;
-            rgb[i] = rgb[i + 1] = rgb[i + 2] = v;
-        }
-    }
+    std::vector<uint8_t> rgb;
+    render_framebuffer(rgb, fb, SCALE, false);
 
-    const char *path = "render_layout.bmp";
+    const char *path = "render_layout_current.bmp";
     write_bmp(path, W, H, rgb);
 
     std::FILE *check = std::fopen(path, "rb");
     TEST_ASSERT_NOT_NULL_MESSAGE(check, "failed to write render_layout.bmp");
     if (check) std::fclose(check);
 
+    FrameBuffer warn_detail;
+    warn_detail.clear();
+    fb_text(warn_detail, 18, 14, "WARNING", 5);
+    fb_text(warn_detail, 18, 112, "MOTOR HOT", 5);
+    render_framebuffer(rgb, warn_detail, SCALE, true);
+    const char *warning_path = "render_warning_detail_motor_hot.bmp";
+    write_bmp(warning_path, W, H, rgb);
+
+    std::FILE *warning_check = std::fopen(warning_path, "rb");
+    TEST_ASSERT_NOT_NULL_MESSAGE(warning_check, "failed to write render_warning_detail_motor_hot.bmp");
+    if (warning_check) std::fclose(warning_check);
+
     auto full_path = std::filesystem::absolute(path);
     TEST_MESSAGE(full_path.string().c_str());
+    auto warning_full_path = std::filesystem::absolute(warning_path);
+    TEST_MESSAGE(warning_full_path.string().c_str());
 }
 
 void setUp(void) {}
