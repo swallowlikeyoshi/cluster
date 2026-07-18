@@ -28,6 +28,7 @@ namespace {
     constexpr int PIN_GEAR_D  = 33;
     constexpr int PIN_PADDOCK = 26;
     constexpr int PIN_LCD_ACTION = 27;
+    constexpr int PIN_VESS_DISABLE = 25; // LOW requests VESS off; open = on
     constexpr uint32_t CAN_STARTUP_GRACE_MS = 3000;
     constexpr uint32_t CONTROLLER_FRAME_TIMEOUT_MS = 300;
     constexpr uint32_t VCU_STATUS_TIMEOUT_MS = 300;
@@ -189,11 +190,13 @@ static void hmi_update() {
     sw.gear_raw    = digitalRead(PIN_GEAR_R) == LOW ? 1 : digitalRead(PIN_GEAR_D) == LOW ? 2 : 0;
     sw.paddock     = digitalRead(PIN_PADDOCK) == LOW;
     sw.config_bits = 0;
+    sw.vess_enabled = digitalRead(PIN_VESS_DISABLE) != LOW;
     ClusterCommand cmd = hmi_compute(sw);
     if (!state.gear_from_can) {
         state.gear = command_gear_code(cmd.gear);
     }
     state.drive_mode = cmd.drive_mode;
+    state.vess_enabled = cmd.vess_enabled;
     state.reset_req  = false;
     can_bus::send_command(cmd);
 }
@@ -233,6 +236,7 @@ void modules_init() {
     pinMode(PIN_GEAR_D,  INPUT_PULLUP);
     pinMode(PIN_PADDOCK, INPUT_PULLUP);
     pinMode(PIN_LCD_ACTION, INPUT_PULLUP);
+    pinMode(PIN_VESS_DISABLE, INPUT_PULLUP);
     can_bus::begin();
     gps_laptimer::begin();
     bms_ble::begin();

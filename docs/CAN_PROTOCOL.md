@@ -73,7 +73,7 @@
 | MCU → VCU | 피드백 Part II (온도/상태/에러) | `0x1802D0EF` | `0x1802D0F0` | 50ms | 6 |
 | MCU → METER | 계기 메시지 I | `0x180117EF` | `0x180117F0` | 100ms | 6 |
 | MCU → METER | 계기 메시지 II | `0x180217EF` | `0x180217F0` | 100ms | 6 |
-| Cluster → VCU | 커맨드 (config/리셋) | `0x1801D0C0` (신규) | — | 100ms | 6 |
+| Cluster → VCU | 커맨드 (config/VESS/패독) | `0x1801D0C0` (신규) | — | 100ms | 6 |
 
 > ID에서 PS(목적지)·SA(송신)만 컨트롤러별로 바뀜. 위 표의 ID는 `PF<<16 | PS<<8 | SA`로 조립됨(+ Priority).
 
@@ -154,7 +154,7 @@
 
 ### 5.7 Cluster → VCU : 커맨드  `0x1801D0C0` (신규 할당) · 100ms
 
-> 계기판 스위치(기어·주행모드·패독)를 VCU에 전달. **EZkontrol 표준이 아닌 HEVEN 자체 정의.**
+> 계기판 스위치(기어·주행모드·패독·VESS on/off)를 VCU에 전달. **EZkontrol 표준이 아닌 HEVEN 자체 정의.**
 > PF=0x01, PS=0xD0(VCU), SA=0xC0(Cluster). MCU→VCU(0x1801D0EF)와 SA로 구분되어 충돌 없음.
 > 인코딩 구현: Cluster 펌웨어 `encode_cluster_command()`. 아래 레이아웃과 일치.
 
@@ -162,10 +162,11 @@
 |--------|------|------|
 | 0 | Gear | 0:N, 1:R, 2:D |
 | 1 | Drive mode | 0:Normal, 1:Efficiency, 2:Sport |
-| 2 | bit0 = Paddock | 1 = 속도제한 **요청** (실제 제한은 VCU가 클램프) |
+| 2 | Flags | bit0: Paddock request, bit1: VESS enabled |
 | 3~7 | 예약 | 0 |
 
 > ⚠️ 패독은 **요청 신호**일 뿐. VCU가 토크/속도를 상한 이하로 클램프하고 CAN 끊김 시 fail-safe(제한 유지)를 결정해야 함.
+> VESS enabled는 fail-open 의미다. Cluster 스위치가 미장착/단선되어 GPIO가 pull-up이면 1(ON)로 전송되고, VESS disable 스위치가 GND로 당겨질 때만 0(OFF 요청)으로 전송한다.
 
 ### 5.8 VCU → Cluster : 표시 상태  `0x1801C0D0` (HEVEN 정의) · 50~100ms 권장
 

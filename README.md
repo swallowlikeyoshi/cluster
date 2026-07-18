@@ -46,7 +46,7 @@ pio run -e esp32dev -t upload
 
 ## 모듈 목록 (FILL-IN)
 
-- `hmi_input` — 스위치(기어·패독·config) → `ClusterCommand` (CAN으로 VCU에 전송)
+- `hmi_input` — 스위치(기어·패독·VESS·config) → `ClusterCommand` (CAN으로 VCU에 전송)
 - `widgets/` — 계기판 화면 위젯 (speed·battery·warnings·gear ...). 1bpp 프레임버퍼에 그림.
   새 위젯 추가법: `docs/ADDING_A_WIDGET.md`
 

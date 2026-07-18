@@ -10,8 +10,7 @@ ClusterCommand hmi_compute(const HmiSwitches &in) {
     }
     cmd.paddock    = in.paddock;
     cmd.drive_mode = (uint8_t)(in.config_bits & 0x03);
-
-    // 코드 수정 예시
+    cmd.vess_enabled = in.vess_enabled;
 
     return cmd;
 }

@@ -31,12 +31,20 @@ void test_encode_gear_and_mode(void) {
     TEST_ASSERT_EQUAL_UINT8(2, out[0]);   // gear D = 2
     TEST_ASSERT_EQUAL_UINT8(2, out[1]);   // drive_mode
     TEST_ASSERT_EQUAL_UINT8(0, out[2] & 0x01);   // paddock off
+    TEST_ASSERT_EQUAL_UINT8(0x02, out[2] & 0x02); // VESS defaults on
 }
 
 void test_encode_paddock_bit(void) {
     uint8_t out[8];
     encode_cluster_command({Gear::N, 0, true}, out);
     TEST_ASSERT_EQUAL_UINT8(1, out[2] & 0x01);   // paddock on
+}
+void test_encode_vess_bit(void) {
+    uint8_t out[8];
+    encode_cluster_command({Gear::N, 0, false, true}, out);
+    TEST_ASSERT_EQUAL_UINT8(0x02, out[2] & 0x02); // VESS enabled
+    encode_cluster_command({Gear::N, 0, false, false}, out);
+    TEST_ASSERT_EQUAL_UINT8(0, out[2] & 0x02);    // VESS off request
 }
 
 void setUp(void) {}
@@ -54,5 +62,6 @@ int main(int, char **) {
     RUN_TEST(test_decode_speed);
     RUN_TEST(test_encode_gear_and_mode);
     RUN_TEST(test_encode_paddock_bit);
+    RUN_TEST(test_encode_vess_bit);
     return UNITY_END();
 }

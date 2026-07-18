@@ -16,6 +16,13 @@ void test_paddock_passthrough(void) {
 void test_drive_mode_from_config(void) {
     TEST_ASSERT_EQUAL_UINT8(2, hmi_compute({0, false, 0x02}).drive_mode);
 }
+void test_vess_defaults_on(void) {
+    TEST_ASSERT_TRUE(hmi_compute({0, false, 0}).vess_enabled);
+}
+void test_vess_passthrough(void) {
+    TEST_ASSERT_TRUE(hmi_compute({0, false, 0, true}).vess_enabled);
+    TEST_ASSERT_FALSE(hmi_compute({0, false, 0, false}).vess_enabled);
+}
 
 void setUp(void) {}
 void tearDown(void) {}
@@ -25,5 +32,7 @@ int main(int, char **) {
     RUN_TEST(test_gear_out_of_range_defaults_N);
     RUN_TEST(test_paddock_passthrough);
     RUN_TEST(test_drive_mode_from_config);
+    RUN_TEST(test_vess_defaults_on);
+    RUN_TEST(test_vess_passthrough);
     return UNITY_END();
 }
