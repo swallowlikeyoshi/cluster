@@ -26,11 +26,27 @@ void test_laptime_waiting_still_draws_placeholder(void) {
     TEST_ASSERT_TRUE(lit_in(fb, 0, 31, 200, 28) > 0);
 }
 
+void test_best_lap_draws_record(void) {
+    FrameBuffer fb;
+    fb.clear();
+    widget_best_lap_draw(fb, 0, 0, 1, 80770);
+    TEST_ASSERT_TRUE(lit_in(fb, 0, 0, 100, 30) > 0);
+}
+
+void test_best_lap_draws_placeholder(void) {
+    FrameBuffer fb;
+    fb.clear();
+    widget_best_lap_draw(fb, 0, 0, 0, 0);
+    TEST_ASSERT_TRUE(lit_in(fb, 0, 0, 100, 30) > 0);
+}
+
 void setUp(void) {}
 void tearDown(void) {}
 int main(int, char **) {
     UNITY_BEGIN();
     RUN_TEST(test_laptime_draws);
     RUN_TEST(test_laptime_waiting_still_draws_placeholder);
+    RUN_TEST(test_best_lap_draws_record);
+    RUN_TEST(test_best_lap_draws_placeholder);
     return UNITY_END();
 }

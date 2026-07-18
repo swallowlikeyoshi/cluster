@@ -1,6 +1,7 @@
 #include "core/bms_ble.h"
 #include <Arduino.h>
 #include <NimBLEDevice.h>
+#include "bms_protocol.h"
 #include "state.h"
 
 namespace bms_ble {
@@ -24,30 +25,6 @@ bool initialized = false;
 uint8_t frame_buf[64];
 int frame_len_used = 0;
 
-uint16_t u16le(const uint8_t *d) {
-    return (uint16_t)(d[0] | ((uint16_t)d[1] << 8));
-}
-
-bool checksum_ok(const uint8_t *f, int len) {
-    if (len < 8) return false;
-    uint16_t sum = 0;
-    for (int i = 1; i < len - 4; ++i) {
-        sum = (uint16_t)(sum + f[i]);
-    }
-    return u16le(f + len - 4) == sum;
-}
-
-int expected_frame_len(uint8_t id) {
-    switch (id) {
-        case 0x24: return 36;  // 14 cell voltages
-        case 0x2A: return 32;  // summary: V/I/temp/capacity/SOC
-        case 0x25: return 32;
-        case 0x2B: return 32;
-        case 0x10: return 15;
-        default: return 0;
-    }
-}
-
 void mark_disconnected() {
     write_ch = nullptr;
     frame_len_used = 0;
@@ -57,27 +34,22 @@ void mark_disconnected() {
     }
 }
 
-void parse_summary(const uint8_t *f) {
-    const uint16_t pack_mv = u16le(f + 8);
-    const int16_t current_ma = (int16_t)u16le(f + 10);
-    const uint16_t remain_mah = u16le(f + 16);
-    uint8_t soc_pct = f[24];
-    if (soc_pct > 100) soc_pct = 100;
-
-    state.bms_pack_voltage = (float)pack_mv * 0.001f;
-    state.bms_current = (float)current_ma * 0.001f;
-    state.bms_temp_c = f[12];
-    state.bms_remaining_mah = remain_mah;
-    state.soc = (float)soc_pct * 0.01f;
+void apply_summary(const BmsSummary &summary) {
+    state.bms_pack_voltage = summary.pack_voltage_v;
+    state.bms_current = summary.current_a;
+    state.bms_temp_c = summary.temp_c;
+    state.bms_remaining_mah = summary.remaining_mah;
+    state.soc = (float)summary.soc_pct * 0.01f;
     state.soc_valid = true;
-    state.bms_soh = f[25];
-    state.bms_cycles = u16le(f + 26);
+    state.bms_soh = summary.soh_pct;
+    state.bms_cycles = summary.cycles;
     state.bms_last_rx_ms = millis();
     state.bms_ble_connected = true;
 }
 
-void handle_frame(const uint8_t *f) {
-    if (f[2] == 0x2A) parse_summary(f);
+void handle_frame(const uint8_t *f, int len) {
+    BmsSummary summary;
+    if (bms_decode_summary_frame(f, len, summary)) apply_summary(summary);
 }
 
 void feed_byte(uint8_t b) {
@@ -94,16 +66,15 @@ void feed_byte(uint8_t b) {
     frame_buf[frame_len_used++] = b;
 
     if (frame_len_used < 3) return;
-    const int want = expected_frame_len(frame_buf[2]);
+    const int want = bms_expected_frame_len(frame_buf[2]);
     if (want == 0) {
         frame_len_used = 0;
         return;
     }
     if (frame_len_used < want) return;
 
-    if (frame_buf[want - 2] == 0x0D && frame_buf[want - 1] == 0x0A &&
-        checksum_ok(frame_buf, want)) {
-        handle_frame(frame_buf);
+    if (frame_buf[want - 2] == 0x0D && frame_buf[want - 1] == 0x0A) {
+        handle_frame(frame_buf, want);
     }
     frame_len_used = 0;
 }
@@ -129,8 +100,8 @@ void send_handshake() {
 }
 
 void poll_frame(uint8_t id) {
-    const uint8_t checksum = (uint8_t)((0x16 + id) & 0xFF);
-    const uint8_t frame[] = { 0x3A, 0x16, id, 0x00, checksum, 0x00, 0x0D, 0x0A };
+    const uint8_t request_sum = (uint8_t)((0x16 + id) & 0xFF);
+    const uint8_t frame[] = { 0x3A, 0x16, id, 0x00, request_sum, 0x00, 0x0D, 0x0A };
     write_raw(frame, sizeof(frame));
 }
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "framebuffer.h"
-// [FILL-IN] Draws warning icons (fault/HV) at (x,y). Pure. Absorbs the old
-// indicators module: warnings now render on the display instead of LEDs.
+// [FILL-IN] Draws the HV indicator at (x,y). Faults are shown by the red
+// warning screen instead of a small WARN label.
 
 void widget_warnings_draw(FrameBuffer &fb, int x, int y, bool fault, bool hv);

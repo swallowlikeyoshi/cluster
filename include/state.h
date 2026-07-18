@@ -63,6 +63,8 @@ struct ClusterState {
     uint8_t  lap_count      = 0;
     uint32_t current_lap_ms = 0;
     uint32_t last_lap_ms    = 0;
+    uint8_t  best_lap_count = 0;
+    uint32_t best_lap_ms    = 0;
 };
 
 extern ClusterState state;   // defined in core/app_wiring.cpp

@@ -108,7 +108,13 @@ void update_lap(double lat, double lon) {
     }
 
     if (lap_armed && dist <= START_RADIUS_M && now - last_cross_ms >= MIN_LAP_MS) {
-        state.last_lap_ms = now - last_cross_ms;
+        const uint32_t lap_ms = now - last_cross_ms;
+        const uint8_t completed_lap = state.lap_count < 99 ? (uint8_t)(state.lap_count + 1) : 99;
+        state.last_lap_ms = lap_ms;
+        if (state.best_lap_ms == 0 || lap_ms < state.best_lap_ms) {
+            state.best_lap_ms = lap_ms;
+            state.best_lap_count = completed_lap;
+        }
         state.current_lap_ms = 0;
         last_cross_ms = now;
         if (state.lap_count < 99) ++state.lap_count;
@@ -193,6 +199,8 @@ bool start_at_current_fix() {
     state.lap_count = 0;
     state.current_lap_ms = 0;
     state.last_lap_ms = 0;
+    state.best_lap_count = 0;
+    state.best_lap_ms = 0;
     return true;
 }
 

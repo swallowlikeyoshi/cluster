@@ -8,9 +8,7 @@ void indicator_box(FrameBuffer &fb, int x, int y, bool active) {
 }
 
 void widget_warnings_draw(FrameBuffer &fb, int x, int y, bool fault, bool hv) {
-    fb_text(fb, x, y, "WARN", 1);
-    indicator_box(fb, x + 32, y, fault);
-
-    fb_text(fb, x, y + 13, "HV", 1);
-    indicator_box(fb, x + 32, y + 13, hv);
+    (void)fault;
+    fb_text(fb, x, y, "HV", 1);
+    indicator_box(fb, x + 18, y, hv);
 }

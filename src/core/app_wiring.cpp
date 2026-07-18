@@ -17,6 +17,7 @@
 #include "modules/widgets/widget_gear.h"
 #include "modules/widgets/widget_laptime.h"
 #include <Arduino.h>
+#include <cstdio>
 
 // [LOCKED] The ONLY translation unit that touches `state`.
 ClusterState state;
@@ -29,6 +30,7 @@ namespace {
     constexpr int PIN_PADDOCK = 26;
     constexpr int PIN_LCD_ACTION = 27;
     constexpr int PIN_VESS_DISABLE = 25; // LOW requests VESS off; open = on
+    constexpr int PIN_STATUS_PAGE = 34;  // external pullup; LOW shows vehicle status
     constexpr uint32_t CAN_STARTUP_GRACE_MS = 3000;
     constexpr uint32_t CONTROLLER_FRAME_TIMEOUT_MS = 300;
     constexpr uint32_t VCU_STATUS_TIMEOUT_MS = 300;
@@ -95,6 +97,109 @@ namespace {
     void warning_line(int &y, const char *label, int scale, int step) {
         fb_text(fb, 18, y, label, scale);
         y += step;
+    }
+
+    bool status_page_active() {
+        return digitalRead(PIN_STATUS_PAGE) == LOW;
+    }
+
+    const char *fresh_label(uint32_t last_ms, uint32_t now, uint32_t timeout_ms) {
+        if (last_ms == 0) return "WAIT";
+        return frame_fresh(last_ms, now, timeout_ms) ? "OK" : "ERR";
+    }
+
+    const char *dual_fresh_label(uint32_t last_a, uint32_t last_b,
+                                 uint32_t now, uint32_t timeout_ms) {
+        if (last_a == 0 || last_b == 0) return "WAIT";
+        return frame_fresh(last_a, now, timeout_ms) &&
+               frame_fresh(last_b, now, timeout_ms) ? "OK" : "ERR";
+    }
+
+    const char *on_off(bool value) {
+        return value ? "ON" : "OFF";
+    }
+
+    const char *motor_heat_label(uint8_t err1) {
+        return (err1 & (1u << 5)) ? "HOT" : "OK";
+    }
+
+    const char *ctrl_heat_label(uint8_t err1) {
+        return (err1 & (1u << 4)) ? "HOT" : "OK";
+    }
+
+    const char *volt_label(uint8_t err1) {
+        if (err1 & (1u << 2)) return "OVER";
+        if (err1 & (1u << 3)) return "LOW";
+        return "OK";
+    }
+
+    void status_line(int &y, const char *text) {
+        fb_text(fb, 8, y, text, 2);
+        y += 17;
+    }
+
+    void draw_vehicle_status() {
+        const uint32_t now = millis();
+        char buf[32];
+
+        fb_text(fb, 8, 8, "CAR CHECK", 3);
+
+        int y = 39;
+        std::snprintf(buf, sizeof(buf), "CAN L %s R %s",
+                      dual_fresh_label(state.controller_l_fb1_last_ms,
+                                       state.controller_l_fb2_last_ms,
+                                       now, CONTROLLER_FRAME_TIMEOUT_MS),
+                      dual_fresh_label(state.controller_r_fb1_last_ms,
+                                       state.controller_r_fb2_last_ms,
+                                       now, CONTROLLER_FRAME_TIMEOUT_MS));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "VCU %s HV %s",
+                      fresh_label(state.vcu_cluster_status_last_ms, now, VCU_STATUS_TIMEOUT_MS),
+                      on_off(state.hv_active));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "L MTR %03d %s",
+                      state.motor_temp, motor_heat_label(state.error1));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "R MTR %03d %s",
+                      state.motor_temp_r, motor_heat_label(state.error1_r));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "L CTRL %03d %s",
+                      state.controller_temp, ctrl_heat_label(state.error1));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "R CTRL %03d %s",
+                      state.controller_temp_r, ctrl_heat_label(state.error1_r));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "L VOLT %03d.%01d %s",
+                      (int)state.bus_voltage, ((int)(state.bus_voltage * 10.0f)) % 10,
+                      volt_label(state.error1));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "R VOLT %03d.%01d %s",
+                      (int)state.bus_voltage_r, ((int)(state.bus_voltage_r * 10.0f)) % 10,
+                      volt_label(state.error1_r));
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "L ERR %03u %03u %03u",
+                      state.error1, state.error2, state.error3);
+        status_line(y, buf);
+
+        std::snprintf(buf, sizeof(buf), "R ERR %03u %03u %03u",
+                      state.error1_r, state.error2_r, state.error3_r);
+        status_line(y, buf);
+
+        const int soc_pct = state.soc_valid ? (int)(state.soc * 100.0f + 0.5f) : -1;
+        if (soc_pct >= 0) {
+            std::snprintf(buf, sizeof(buf), "PACK OK %03d%%", soc_pct);
+        } else {
+            std::snprintf(buf, sizeof(buf), "PACK WAIT ---%%");
+        }
+        status_line(y, buf);
     }
 
     void draw_warning_detail() {
@@ -208,16 +313,20 @@ static void bms_update() { bms_ble::poll(); }
 static void display_update() {
     fb.clear();
     const bool warn = warning_active();
-    if (warn && warning_detail_page) {
+    if (status_page_active()) {
+        draw_vehicle_status();
+    } else if (warn && warning_detail_page) {
         draw_warning_detail();
     } else {
         widget_speed_draw(fb,    10,  10, (int)state.speed_rpm);
+        widget_warnings_draw(fb, 248,  22, warn, state.hv_active);
         widget_gear_draw(fb,     289,  16, gear_code(state.gear));
         const int soc_pct = state.soc_valid ? (int)(state.soc * 100.0f + 0.5f) : -1;
         widget_battery_draw(fb, 285,  48, soc_pct);
-        widget_laptime_draw(fb,  10, 145, state.lap_count,
+        widget_laptime_draw(fb,  10, 136, state.lap_count,
                             state.current_lap_ms, state.gps_fix_ok);
-        widget_warnings_draw(fb, 220, 188, warn, state.hv_active);
+        widget_best_lap_draw(fb, 205, 207, state.best_lap_count,
+                             state.best_lap_ms);
     }
     display_blit::show(fb, warn);
 }
@@ -237,6 +346,7 @@ void modules_init() {
     pinMode(PIN_PADDOCK, INPUT_PULLUP);
     pinMode(PIN_LCD_ACTION, INPUT_PULLUP);
     pinMode(PIN_VESS_DISABLE, INPUT_PULLUP);
+    pinMode(PIN_STATUS_PAGE, INPUT);
     can_bus::begin();
     gps_laptimer::begin();
     bms_ble::begin();

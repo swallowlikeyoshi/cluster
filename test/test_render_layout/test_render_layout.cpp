@@ -67,47 +67,72 @@ void render_framebuffer(std::vector<uint8_t> &rgb, const FrameBuffer &fb,
     }
 }
 
+void draw_normal_layout(FrameBuffer &fb, bool warning) {
+    fb.clear();
+    widget_speed_draw(fb,    10,  10, 1600);
+    widget_warnings_draw(fb, 248,  22, warning, true);
+    widget_gear_draw(fb,     289,  16, 2 /* D */);
+    widget_battery_draw(fb, 285,  48, -1);
+    widget_laptime_draw(fb,  10, 136, 3, 85670, true);
+    widget_best_lap_draw(fb, 205, 207, 1, 80770);
+}
+
+void draw_warning_detail(FrameBuffer &fb) {
+    fb.clear();
+    fb_text(fb, 18, 14, "WARNING", 5);
+    fb_text(fb, 18, 112, "MOTOR HOT", 5);
+}
+
+void status_line(FrameBuffer &fb, int &y, const char *text) {
+    fb_text(fb, 8, y, text, 2);
+    y += 17;
+}
+
+void draw_status_detail(FrameBuffer &fb) {
+    fb.clear();
+    fb_text(fb, 8, 8, "CAR CHECK", 3);
+    int y = 39;
+    status_line(fb, y, "CAN L OK R OK");
+    status_line(fb, y, "VCU OK HV ON");
+    status_line(fb, y, "L MTR 088 HOT");
+    status_line(fb, y, "R MTR 052 OK");
+    status_line(fb, y, "L CTRL 074 HOT");
+    status_line(fb, y, "R CTRL 048 OK");
+    status_line(fb, y, "L VOLT 121.5 OVER");
+    status_line(fb, y, "R VOLT 119.8 OK");
+    status_line(fb, y, "L ERR 048 000 000");
+    status_line(fb, y, "R ERR 000 000 000");
+    status_line(fb, y, "PACK OK 078%");
+}
+
+void write_frame(const char *path, FrameBuffer &fb, int scale, bool warning_screen) {
+    std::vector<uint8_t> rgb;
+    render_framebuffer(rgb, fb, scale, warning_screen);
+    write_bmp(path, FB_W * scale, FB_H * scale, rgb);
+    std::FILE *check = std::fopen(path, "rb");
+    TEST_ASSERT_NOT_NULL_MESSAGE(check, path);
+    if (check) std::fclose(check);
+    auto full_path = std::filesystem::absolute(path);
+    TEST_MESSAGE(full_path.string().c_str());
+}
+
 }  // namespace
 
 void test_render_layout_writes_bmp(void) {
     FrameBuffer fb;
-    fb.clear();
-
-    // Same calls/coordinates as src/core/app_wiring.cpp display_update()
-    widget_speed_draw(fb,    10,  10, 1600);
-    widget_gear_draw(fb,     289,  16, 2 /* D */);
-    widget_battery_draw(fb, 285,  48, -1);
-    widget_laptime_draw(fb,  10, 145, 2, 85670, true);
-    widget_warnings_draw(fb, 220, 188, false, true);
-
     const int SCALE = 3;
-    int W = FB_W * SCALE, H = FB_H * SCALE;
-    std::vector<uint8_t> rgb;
-    render_framebuffer(rgb, fb, SCALE, false);
 
-    const char *path = "render_layout_current.bmp";
-    write_bmp(path, W, H, rgb);
+    draw_normal_layout(fb, false);
+    write_frame("render_layout_current.bmp", fb, SCALE, false);
 
-    std::FILE *check = std::fopen(path, "rb");
-    TEST_ASSERT_NOT_NULL_MESSAGE(check, "failed to write render_layout.bmp");
-    if (check) std::fclose(check);
+    draw_normal_layout(fb, true);
+    write_frame("render_layout_warning.bmp", fb, SCALE, true);
 
-    FrameBuffer warn_detail;
-    warn_detail.clear();
-    fb_text(warn_detail, 18, 14, "WARNING", 5);
-    fb_text(warn_detail, 18, 112, "MOTOR HOT", 5);
-    render_framebuffer(rgb, warn_detail, SCALE, true);
-    const char *warning_path = "render_warning_detail_motor_hot.bmp";
-    write_bmp(warning_path, W, H, rgb);
+    draw_warning_detail(fb);
+    write_frame("render_warning_detail_motor_hot.bmp", fb, SCALE, true);
 
-    std::FILE *warning_check = std::fopen(warning_path, "rb");
-    TEST_ASSERT_NOT_NULL_MESSAGE(warning_check, "failed to write render_warning_detail_motor_hot.bmp");
-    if (warning_check) std::fclose(warning_check);
-
-    auto full_path = std::filesystem::absolute(path);
-    TEST_MESSAGE(full_path.string().c_str());
-    auto warning_full_path = std::filesystem::absolute(warning_path);
-    TEST_MESSAGE(warning_full_path.string().c_str());
+    draw_status_detail(fb);
+    write_frame("render_status_detail.bmp", fb, SCALE, false);
 }
 
 void setUp(void) {}

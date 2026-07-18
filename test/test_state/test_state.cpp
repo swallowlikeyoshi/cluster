@@ -29,6 +29,8 @@ void test_state_defaults_safe(void) {
     TEST_ASSERT_EQUAL_UINT8(0, s.lap_count);
     TEST_ASSERT_EQUAL_UINT32(0, s.current_lap_ms);
     TEST_ASSERT_EQUAL_UINT32(0, s.last_lap_ms);
+    TEST_ASSERT_EQUAL_UINT8(0, s.best_lap_count);
+    TEST_ASSERT_EQUAL_UINT32(0, s.best_lap_ms);
 }
 
 void setUp(void) {}
