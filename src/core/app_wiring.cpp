@@ -30,7 +30,7 @@ namespace {
     constexpr int PIN_PADDOCK = 26;
     constexpr int PIN_LCD_ACTION = 27;
     constexpr int PIN_VESS_DISABLE = 25; // LOW requests VESS off; open = on
-    constexpr int PIN_STATUS_PAGE = 34;  // external pullup; LOW shows vehicle status
+    constexpr int PIN_STATUS_PAGE = 21;  // LOW shows vehicle status
     constexpr uint32_t CAN_STARTUP_GRACE_MS = 3000;
     constexpr uint32_t CONTROLLER_FRAME_TIMEOUT_MS = 300;
     constexpr uint32_t VCU_STATUS_TIMEOUT_MS = 300;
@@ -346,7 +346,7 @@ void modules_init() {
     pinMode(PIN_PADDOCK, INPUT_PULLUP);
     pinMode(PIN_LCD_ACTION, INPUT_PULLUP);
     pinMode(PIN_VESS_DISABLE, INPUT_PULLUP);
-    pinMode(PIN_STATUS_PAGE, INPUT);
+    pinMode(PIN_STATUS_PAGE, INPUT_PULLUP);
     can_bus::begin();
     gps_laptimer::begin();
     bms_ble::begin();
