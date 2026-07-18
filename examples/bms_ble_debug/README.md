@@ -1,4 +1,4 @@
-# BMS BLE Reader Test
+# BMS BLE Debug Tool
 
 Standalone ESP32 sketch for checking the BEXEL / LWS-1608 smart BMS BLE
 protocol before relying on it from the cluster firmware.
@@ -9,7 +9,7 @@ https://github.com/swallowlikeyoshi/bexel-v2-bluetooth-protocol
 ## Run
 
 ```powershell
-cd C:\Users\hyun1\OneDrive\문서\HEVEN\github\cluster\examples\bms_ble_reader
+cd C:\Users\hyun1\OneDrive\문서\HEVEN\github\cluster\examples\bms_ble_debug
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" run -t upload
 & "$env:USERPROFILE\.platformio\penv\Scripts\pio.exe" device monitor
 ```
