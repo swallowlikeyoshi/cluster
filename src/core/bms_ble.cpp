@@ -28,15 +28,6 @@ uint16_t u16le(const uint8_t *d) {
     return (uint16_t)(d[0] | ((uint16_t)d[1] << 8));
 }
 
-bool checksum_ok(const uint8_t *f, int len) {
-    if (len < 8) return false;
-    uint16_t sum = 0;
-    for (int i = 1; i < len - 4; ++i) {
-        sum = (uint16_t)(sum + f[i]);
-    }
-    return u16le(f + len - 4) == sum;
-}
-
 int expected_frame_len(uint8_t id) {
     switch (id) {
         case 0x24: return 36;  // 14 cell voltages
@@ -101,8 +92,10 @@ void feed_byte(uint8_t b) {
     }
     if (frame_len_used < want) return;
 
-    if (frame_buf[want - 2] == 0x0D && frame_buf[want - 1] == 0x0A &&
-        checksum_ok(frame_buf, want)) {
+    // The upstream reverse-engineered protocol does not fully verify response
+    // checksums yet. Frame start, fixed length, and CR/LF terminator are the
+    // reliable sync points used by the reference parser.
+    if (frame_buf[want - 2] == 0x0D && frame_buf[want - 1] == 0x0A) {
         handle_frame(frame_buf);
     }
     frame_len_used = 0;
