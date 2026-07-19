@@ -83,8 +83,35 @@ void draw_warning_detail(FrameBuffer &fb) {
     fb_text(fb, 18, 112, "MOTOR HOT", 5);
 }
 
+const uint8_t *status_glyph(char c) {
+    static const uint8_t glyph_b[7] = {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E};
+    static const uint8_t glyph_s[7] = {0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E};
+    if (c == 'B') return glyph_b;
+    if (c == 'S') return glyph_s;
+    return font_glyph(c);
+}
+
+void status_text(FrameBuffer &fb, int x, int y, const char *text, int scale) {
+    if (scale < 1) scale = 1;
+    int cx = x;
+    for (const char *p = text; *p; ++p) {
+        const uint8_t *g = status_glyph(*p);
+        if (g) {
+            for (int r = 0; r < 7; ++r) {
+                for (int c = 0; c < 5; ++c) {
+                    if (g[r] & (0x10 >> c)) {
+                        fb_rect(fb, cx + c * scale, y + r * scale,
+                                scale, scale, true, true);
+                    }
+                }
+            }
+        }
+        cx += 6 * scale;
+    }
+}
+
 void status_line(FrameBuffer &fb, int &y, const char *text) {
-    fb_text(fb, 8, y, text, 2);
+    status_text(fb, 8, y, text, 2);
     y += 17;
 }
 
@@ -102,7 +129,7 @@ void draw_status_detail(FrameBuffer &fb) {
     status_line(fb, y, "R VOLT 119.8 OK");
     status_line(fb, y, "L ERR 048 000 000");
     status_line(fb, y, "R ERR 000 000 000");
-    status_line(fb, y, "PACK OK 078%");
+    status_line(fb, y, "BMS OK 078% 51V");
 }
 
 void write_frame(const char *path, FrameBuffer &fb, int scale, bool warning_screen) {

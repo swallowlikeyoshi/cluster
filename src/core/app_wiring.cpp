@@ -133,8 +133,35 @@ namespace {
         return "OK";
     }
 
+    const uint8_t *status_glyph(char c) {
+        static const uint8_t glyph_b[7] = {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E};
+        static const uint8_t glyph_s[7] = {0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E};
+        if (c == 'B') return glyph_b;
+        if (c == 'S') return glyph_s;
+        return font_glyph(c);
+    }
+
+    void status_text(int x, int y, const char *text, int scale) {
+        if (scale < 1) scale = 1;
+        int cx = x;
+        for (const char *p = text; *p; ++p) {
+            const uint8_t *g = status_glyph(*p);
+            if (g) {
+                for (int r = 0; r < 7; ++r) {
+                    for (int c = 0; c < 5; ++c) {
+                        if (g[r] & (0x10 >> c)) {
+                            fb_rect(fb, cx + c * scale, y + r * scale,
+                                    scale, scale, true, true);
+                        }
+                    }
+                }
+            }
+            cx += 6 * scale;
+        }
+    }
+
     void status_line(int &y, const char *text) {
-        fb_text(fb, 8, y, text, 2);
+        status_text(8, y, text, 2);
         y += 17;
     }
 
@@ -193,11 +220,13 @@ namespace {
                       state.error1_r, state.error2_r, state.error3_r);
         status_line(y, buf);
 
+        const bool bms_ok = state.bms_ble_connected && state.bms_last_rx_ms != 0;
         const int soc_pct = state.soc_valid ? (int)(state.soc * 100.0f + 0.5f) : -1;
-        if (soc_pct >= 0) {
-            std::snprintf(buf, sizeof(buf), "PACK OK %03d%%", soc_pct);
+        if (bms_ok && soc_pct >= 0) {
+            const int pack_v = (int)(state.bms_pack_voltage + 0.5f);
+            std::snprintf(buf, sizeof(buf), "BMS OK %03d%% %02dV", soc_pct, pack_v);
         } else {
-            std::snprintf(buf, sizeof(buf), "PACK WAIT ---%%");
+            std::snprintf(buf, sizeof(buf), "BMS WAIT ---");
         }
         status_line(y, buf);
     }
