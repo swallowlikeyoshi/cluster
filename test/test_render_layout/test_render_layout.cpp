@@ -110,8 +110,14 @@ void status_text(FrameBuffer &fb, int x, int y, const char *text, int scale) {
     }
 }
 
-void status_line(FrameBuffer &fb, int &y, const char *text) {
-    status_text(fb, 8, y, text, 2);
+void status_line(FrameBuffer &fb, int &y, const char *text, int scale) {
+    status_text(fb, 8, y, text, scale);
+    y += scale >= 2 ? 17 : 9;
+}
+
+void status_pair_line(FrameBuffer &fb, int &y, const char *left, const char *right) {
+    status_text(fb, 8, y, left, 2);
+    status_text(fb, 164, y, right, 2);
     y += 17;
 }
 
@@ -119,17 +125,21 @@ void draw_status_detail(FrameBuffer &fb) {
     fb.clear();
     fb_text(fb, 8, 8, "CAR CHECK", 3);
     int y = 39;
-    status_line(fb, y, "CAN L OK R OK");
-    status_line(fb, y, "VCU OK HV ON");
-    status_line(fb, y, "L MTR 088 HOT");
-    status_line(fb, y, "R MTR 052 OK");
-    status_line(fb, y, "L CTRL 074 HOT");
-    status_line(fb, y, "R CTRL 048 OK");
-    status_line(fb, y, "L VOLT 121.5 OVER");
-    status_line(fb, y, "R VOLT 119.8 OK");
-    status_line(fb, y, "L ERR 048 000 000");
-    status_line(fb, y, "R ERR 000 000 000");
-    status_line(fb, y, "BMS OK 078% 51V");
+    status_line(fb, y, "CAN L OK R OK", 2);
+    status_line(fb, y, "VCU OK HV ON", 2);
+    status_line(fb, y, "BMS OK 078% 51V", 2);
+
+    y += 2;
+    status_line(fb, y, "LEFT FAULT", 2);
+    status_pair_line(fb, y, "MTR 088C HOT", "CTRL 074C HOT");
+    status_line(fb, y, "VOLT 121.5 OVER", 2);
+
+    y += 2;
+    status_line(fb, y, "RIGHT OK", 2);
+    status_pair_line(fb, y, "MTR 052C OK", "CTRL 048C OK");
+    status_line(fb, y, "VOLT 119.8 OK", 2);
+
+    status_line(fb, y, "RAW L 048 000 000  R 000 000 000", 1);
 }
 
 void write_frame(const char *path, FrameBuffer &fb, int scale, bool warning_screen) {
