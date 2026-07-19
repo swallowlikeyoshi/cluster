@@ -162,13 +162,7 @@ namespace {
 
     void status_line(int &y, const char *text, int scale) {
         status_text(8, y, text, scale);
-        y += scale >= 2 ? 17 : 9;
-    }
-
-    void status_pair_line(int &y, const char *left, const char *right) {
-        status_text(8, y, left, 2);
-        status_text(164, y, right, 2);
-        y += 17;
+        y += scale * 8 + 1;
     }
 
     bool side_fault(uint8_t err1, uint8_t err2, uint8_t err3) {
@@ -182,15 +176,15 @@ namespace {
     void draw_side_status(int &y, const char *side, int motor_temp, int ctrl_temp,
                           float voltage, uint8_t err1, uint8_t err2, uint8_t err3) {
         char buf[48];
-        char left[20];
-        char right[20];
 
         std::snprintf(buf, sizeof(buf), "%s %s", side, fault_label(err1, err2, err3));
+        status_line(y, buf, 3);
+
+        std::snprintf(buf, sizeof(buf), "MTR %03dC %s", motor_temp, motor_heat_label(err1));
         status_line(y, buf, 2);
 
-        std::snprintf(left, sizeof(left), "MTR %03dC %s", motor_temp, motor_heat_label(err1));
-        std::snprintf(right, sizeof(right), "CTRL %03dC %s", ctrl_temp, ctrl_heat_label(err1));
-        status_pair_line(y, left, right);
+        std::snprintf(buf, sizeof(buf), "CTRL %03dC %s", ctrl_temp, ctrl_heat_label(err1));
+        status_line(y, buf, 2);
 
         std::snprintf(buf, sizeof(buf), "VOLT %03d.%01d %s",
                       (int)voltage, ((int)(voltage * 10.0f)) % 10, volt_label(err1));
@@ -201,9 +195,9 @@ namespace {
         const uint32_t now = millis();
         char buf[48];
 
-        fb_text(fb, 8, 8, "CAR CHECK", 3);
+        fb_text(fb, 8, 4, "CAR CHECK", 3);
 
-        int y = 39;
+        int y = 31;
         std::snprintf(buf, sizeof(buf), "CAN L %s R %s",
                       dual_fresh_label(state.controller_l_fb1_last_ms,
                                        state.controller_l_fb2_last_ms,
@@ -228,18 +222,13 @@ namespace {
         }
         status_line(y, buf, 2);
 
-        y += 2;
+        y += 4;
         draw_side_status(y, "LEFT", state.motor_temp, state.controller_temp,
                          state.bus_voltage, state.error1, state.error2, state.error3);
 
-        y += 2;
+        y += 5;
         draw_side_status(y, "RIGHT", state.motor_temp_r, state.controller_temp_r,
                          state.bus_voltage_r, state.error1_r, state.error2_r, state.error3_r);
-
-        std::snprintf(buf, sizeof(buf), "RAW L %03u %03u %03u  R %03u %03u %03u",
-                      state.error1, state.error2, state.error3,
-                      state.error1_r, state.error2_r, state.error3_r);
-        status_line(y, buf, 1);
     }
 
     void draw_warning_detail() {
