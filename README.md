@@ -1,6 +1,6 @@
 # HEVEN Cluster 펌웨어
 
-**2026 영광 대회 · 계기 클러스터(Instrument Cluster) + VESS** — ESP32가 CAN/BLE로 차량 상태(속도·전압·SOC·온도·에러)를 **받아서** OLED 디스플레이·경고등(MCP23017)·경고음(VESS)으로 표현하고, 계기판 버튼 입력을 VCU로 보냅니다. VCU와 달리 **안전 임계가 약한 표시 전용 보드**입니다.
+**2026 영광 대회 · 계기 클러스터(Instrument Cluster)** — ESP32가 CAN/BLE로 차량 상태(속도·전압·SOC·온도·에러)를 **받아서** LCD에 표현하고, 계기판 버튼 입력을 VCU로 보냅니다. VESS 신호 경로와 스위칭은 클러스터 ESP32 GPIO 입력에서 분리합니다. VCU와 달리 **안전 임계가 약한 표시 전용 보드**입니다.
 
 > 🤖 **AI 에이전트/팀원은 [`AGENTS.md`](AGENTS.md)를 먼저 읽으세요** — 무엇을 고쳐도 되고 무엇을 건드리면 안 되는지 규칙이 있습니다.
 
@@ -46,7 +46,7 @@ pio run -e esp32dev -t upload
 
 ## 모듈 목록 (FILL-IN)
 
-- `hmi_input` — 스위치(기어·패독·VESS·config) → `ClusterCommand` (CAN으로 VCU에 전송)
+- `hmi_input` — 스위치(기어·패독·config) → `ClusterCommand` (CAN으로 VCU에 전송)
 - `widgets/` — 계기판 화면 위젯 (speed·battery·warnings·gear ...). 1bpp 프레임버퍼에 그림.
   새 위젯 추가법: `docs/ADDING_A_WIDGET.md`
 

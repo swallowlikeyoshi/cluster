@@ -22,6 +22,5 @@ void encode_cluster_command(const ClusterCommand &cmd, uint8_t out[8]) {
     for (int i = 0; i < 8; i++) out[i] = 0;
     out[0] = (uint8_t)cmd.gear;         // 0=N,1=R,2=D
     out[1] = cmd.drive_mode;
-    out[2] = (cmd.paddock ? 0x01 : 0x00) |
-             (cmd.vess_enabled ? 0x02 : 0x00);
+    out[2] = (cmd.paddock ? 0x01 : 0x00);
 }

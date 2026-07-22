@@ -8,7 +8,6 @@ struct HmiSwitches {
     uint8_t  gear_raw;      // 0=N, 1=R, 2=D (other -> N)
     bool     paddock;       // paddock-mode switch
     uint16_t config_bits;   // other configurable switches (drive mode in low 2 bits)
-    bool     vess_enabled = true; // VESS on/off switch, default on if not wired
 };
 
 ClusterCommand hmi_compute(const HmiSwitches &in);

@@ -44,7 +44,6 @@ struct ClusterState {
     bool     handshaked = false;
     // HMI outputs (sent to VCU)
     uint8_t  drive_mode = 0;        // 0 Normal, 1 Efficiency, 2 Sport
-    bool     vess_enabled = true;   // display/HMI request; VESS defaults on
     bool     reset_req  = false;
 
     // BMS telemetry (display-only). BMS data may arrive directly over BLE

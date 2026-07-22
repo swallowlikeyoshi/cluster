@@ -14,5 +14,4 @@ struct ClusterCommand {
     Gear    gear       = Gear::N;
     uint8_t drive_mode = 0;      // 0 Normal, 1 Efficiency, 2 Sport ...
     bool    paddock    = false;  // request VCU speed limit
-    bool    vess_enabled = true; // fail-open default: VESS stays on unless disabled
 };
