@@ -338,6 +338,7 @@ static void hmi_update() {
 static void can_rx_update() { can_bus::poll_rx(); }
 static void gps_update() { gps_laptimer::poll(); }
 static void bms_update() { bms_ble::poll(); }
+static void bms_can_tx_update() { can_bus::send_bms_status(); }
 static void lv_voltage_update() {
     const int raw = analogRead(PIN_LV_VOLTAGE);
     state.lv_voltage = ((float)raw * LV_ADC_REF_V / LV_ADC_MAX) * LV_DIVIDER_SCALE;
@@ -369,6 +370,7 @@ Task g_tasks[] = {
     { can_rx_update,   5, 0 },   // 200 Hz drain
     { gps_update,     20, 0 },   // 50 Hz UART drain
     { bms_update,    100, 0 },   // 10 Hz BLE BMS state machine
+    { bms_can_tx_update, 100, 0 }, // 10 Hz BMS telemetry to logger/TMA-1
     { lv_voltage_update, 100, 0 }, // 10 Hz LV 12V monitor
     { hmi_update,     20, 0 },   // 50 Hz
     { display_update, 66, 0 },   // ~15 Hz

@@ -22,6 +22,8 @@ void begin() {
 namespace {
     uint16_t u16le(const uint8_t *d) { return (uint16_t)(d[0] | (d[1] << 8)); }
 
+    constexpr uint32_t BMS_CAN_STALE_MS = 5000;
+
     float absf(float v) { return v < 0.0f ? -v : v; }
 
     void update_display_rpm() {
@@ -72,6 +74,39 @@ namespace {
             // Do not clear SOC here: a direct BLE BMS reader may be the source.
         }
     }
+
+    void transmit_ext(uint32_t id, const uint8_t data[8]) {
+        twai_message_t m = {};
+        m.identifier = id;
+        m.extd = 1;
+        m.data_length_code = 8;
+        for (int i = 0; i < 8; ++i) m.data[i] = data[i];
+        twai_transmit(&m, pdMS_TO_TICKS(5));
+    }
+
+    uint8_t soc_percent() {
+        if (!state.soc_valid) return 0;
+        int pct = (int)(state.soc * 100.0f + 0.5f);
+        if (pct < 0) return 0;
+        if (pct > 100) return 100;
+        return (uint8_t)pct;
+    }
+
+    ClusterBmsStatus snapshot_bms_status(uint32_t now) {
+        ClusterBmsStatus bms;
+        const bool fresh = state.bms_last_rx_ms != 0 &&
+                           (now - state.bms_last_rx_ms) <= BMS_CAN_STALE_MS;
+        bms.valid = state.bms_ble_connected && fresh && state.soc_valid;
+        bms.ble_connected = state.bms_ble_connected;
+        bms.soc_pct = soc_percent();
+        bms.pack_voltage_v = state.bms_pack_voltage;
+        bms.current_a = state.bms_current;
+        bms.temp_c = state.bms_temp_c;
+        bms.remaining_mah = state.bms_remaining_mah;
+        bms.soh_pct = state.bms_soh;
+        bms.cycles = state.bms_cycles;
+        return bms;
+    }
 }
 
 void poll_rx() {
@@ -113,10 +148,23 @@ void poll_rx() {
 }
 
 void send_command(const ClusterCommand &cmd) {
-    twai_message_t m = {};
-    m.identifier = CAN_ID_CLUSTER_CMD; m.extd = 1; m.data_length_code = 8;
-    encode_cluster_command(cmd, m.data);
-    twai_transmit(&m, pdMS_TO_TICKS(5));
+    uint8_t data[8];
+    encode_cluster_command(cmd, data);
+    transmit_ext(CAN_ID_CLUSTER_CMD, data);
+}
+
+void send_bms_status() {
+    static uint8_t life = 0;
+    uint8_t data[8];
+    const ClusterBmsStatus bms = snapshot_bms_status(millis());
+
+    encode_cluster_bms_status(bms, life, data);
+    transmit_ext(CAN_ID_CLUSTER_BMS_STATUS, data);
+
+    encode_cluster_bms_detail(bms, life, data);
+    transmit_ext(CAN_ID_CLUSTER_BMS_DETAIL, data);
+
+    ++life;
 }
 
 } // namespace can_bus
