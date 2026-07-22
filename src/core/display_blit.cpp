@@ -10,9 +10,9 @@
 #include <Adafruit_ILI9341.h>
 
 namespace {
-constexpr int PIN_TFT_CS   = 15;
-constexpr int PIN_TFT_DC   = 2;
-constexpr int PIN_TFT_RST  = 16;
+constexpr int PIN_TFT_CS   = 26;
+constexpr int PIN_TFT_DC   = 25;
+constexpr int PIN_TFT_RST  = 33;
 constexpr int PIN_TFT_SCLK = 18;
 constexpr int PIN_TFT_MOSI = 23;
 constexpr int PIN_TFT_MISO = -1;   // ILI9341 readback is unused.

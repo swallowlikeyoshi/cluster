@@ -25,11 +25,17 @@ ClusterState state;
 namespace {
     // Input pins (direct GPIO; if pin count runs short, an io_expander can be
     // reintroduced HERE only, without touching any module).
-    constexpr int PIN_GEAR_R  = 32;
-    constexpr int PIN_GEAR_D  = 33;
-    constexpr int PIN_PADDOCK = 26;
-    constexpr int PIN_LCD_ACTION = 27;
+    constexpr int PIN_PADDOCK = 13;
+    constexpr int PIN_TC = 14;
+    constexpr int PIN_REGEN_A = 16;
+    constexpr int PIN_REGEN_B = 17;
+    constexpr int PIN_DEBUG = 27;
+    constexpr int PIN_LCD_ACTION = 19;
     constexpr int PIN_STATUS_PAGE = 21;  // LOW shows vehicle status
+    constexpr int PIN_LV_VOLTAGE = 34;   // ADC1, 100k/27k divider from LV 12V
+    constexpr float LV_ADC_REF_V = 3.3f;
+    constexpr float LV_ADC_MAX = 4095.0f;
+    constexpr float LV_DIVIDER_SCALE = (100.0f + 27.0f) / 27.0f;
     constexpr uint32_t CAN_STARTUP_GRACE_MS = 3000;
     constexpr uint32_t CONTROLLER_FRAME_TIMEOUT_MS = 300;
     constexpr uint32_t VCU_STATUS_TIMEOUT_MS = 300;
@@ -48,14 +54,6 @@ namespace {
 
     bool frame_stale(uint32_t last_ms, uint32_t now, uint32_t timeout_ms) {
         return !frame_fresh(last_ms, now, timeout_ms);
-    }
-
-    uint8_t command_gear_code(Gear gear) {
-        switch (gear) {
-            case Gear::R: return 1;
-            case Gear::D: return 2;
-            default: return 0;
-        }
     }
 
     bool controller_fault_active() {
@@ -320,14 +318,19 @@ static void hmi_update() {
     lcd_action_update();
 
     HmiSwitches sw;
-    sw.gear_raw    = digitalRead(PIN_GEAR_R) == LOW ? 1 : digitalRead(PIN_GEAR_D) == LOW ? 2 : 0;
-    sw.paddock     = digitalRead(PIN_PADDOCK) == LOW;
-    sw.config_bits = 0;
+    sw.paddock       = digitalRead(PIN_PADDOCK) == LOW;
+    sw.tc_enabled    = digitalRead(PIN_TC) == LOW;
+    sw.regen_a       = digitalRead(PIN_REGEN_A) == LOW;
+    sw.regen_b       = digitalRead(PIN_REGEN_B) == LOW;
+    sw.debug_enabled = digitalRead(PIN_DEBUG) == LOW;
     ClusterCommand cmd = hmi_compute(sw);
     if (!state.gear_from_can) {
-        state.gear = command_gear_code(cmd.gear);
+        state.gear = 0;
     }
-    state.drive_mode = cmd.drive_mode;
+    state.paddock = cmd.paddock;
+    state.tc_enabled = cmd.tc_enabled;
+    state.regen_level = cmd.regen_level;
+    state.debug_enabled = cmd.debug_enabled;
     state.reset_req  = false;
     can_bus::send_command(cmd);
 }
@@ -335,6 +338,11 @@ static void hmi_update() {
 static void can_rx_update() { can_bus::poll_rx(); }
 static void gps_update() { gps_laptimer::poll(); }
 static void bms_update() { bms_ble::poll(); }
+static void lv_voltage_update() {
+    const int raw = analogRead(PIN_LV_VOLTAGE);
+    state.lv_voltage = ((float)raw * LV_ADC_REF_V / LV_ADC_MAX) * LV_DIVIDER_SCALE;
+    state.lv_voltage_valid = true;
+}
 
 static void display_update() {
     fb.clear();
@@ -361,17 +369,21 @@ Task g_tasks[] = {
     { can_rx_update,   5, 0 },   // 200 Hz drain
     { gps_update,     20, 0 },   // 50 Hz UART drain
     { bms_update,    100, 0 },   // 10 Hz BLE BMS state machine
+    { lv_voltage_update, 100, 0 }, // 10 Hz LV 12V monitor
     { hmi_update,     20, 0 },   // 50 Hz
     { display_update, 66, 0 },   // ~15 Hz
 };
 const int G_TASK_COUNT = sizeof(g_tasks) / sizeof(g_tasks[0]);
 
 void modules_init() {
-    pinMode(PIN_GEAR_R,  INPUT_PULLUP);
-    pinMode(PIN_GEAR_D,  INPUT_PULLUP);
     pinMode(PIN_PADDOCK, INPUT_PULLUP);
+    pinMode(PIN_TC, INPUT_PULLUP);
+    pinMode(PIN_REGEN_A, INPUT_PULLUP);
+    pinMode(PIN_REGEN_B, INPUT_PULLUP);
+    pinMode(PIN_DEBUG, INPUT_PULLUP);
     pinMode(PIN_LCD_ACTION, INPUT_PULLUP);
     pinMode(PIN_STATUS_PAGE, INPUT_PULLUP);
+    analogSetPinAttenuation(PIN_LV_VOLTAGE, ADC_11db);
     can_bus::begin();
     gps_laptimer::begin();
     bms_ble::begin();

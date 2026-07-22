@@ -5,9 +5,11 @@
 // The locked core reads the switches and encodes the command to CAN.
 
 struct HmiSwitches {
-    uint8_t  gear_raw;      // 0=N, 1=R, 2=D (other -> N)
     bool     paddock;       // paddock-mode switch
-    uint16_t config_bits;   // other configurable switches (drive mode in low 2 bits)
+    bool     tc_enabled;    // traction control / torque vectoring switch
+    bool     regen_a;       // regen level bit0
+    bool     regen_b;       // regen level bit1
+    bool     debug_enabled; // debug/logging switch
 };
 
 ClusterCommand hmi_compute(const HmiSwitches &in);

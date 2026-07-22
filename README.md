@@ -46,7 +46,7 @@ pio run -e esp32dev -t upload
 
 ## 모듈 목록 (FILL-IN)
 
-- `hmi_input` — 스위치(기어·패독·config) → `ClusterCommand` (CAN으로 VCU에 전송)
+- `hmi_input` — config 스위치(패독·TC·회생·디버그) → `ClusterCommand` (CAN으로 VCU에 전송)
 - `widgets/` — 계기판 화면 위젯 (speed·battery·warnings·gear ...). 1bpp 프레임버퍼에 그림.
   새 위젯 추가법: `docs/ADDING_A_WIDGET.md`
 
@@ -78,7 +78,7 @@ pio run -e esp32dev -t upload
 
 ### v1.1 (2026-06-29) — 디스플레이 프레임버퍼 재설계
 - 패널 독립적 **1bpp 프레임버퍼**(320×160) + 위젯 모듈(speed · battery · warnings · gear) 도입 — 렌더링을 모듈로 넘겨 자유도↑, host 테스트 가능(ASCII 시각화)
-- `hmi_input` → **`ClusterCommand`**(gear · drive_mode · **paddock**) 의미 커맨드 패턴, **패독 모드** 추가
+- `hmi_input` → **`ClusterCommand`**(paddock · TC · regen · debug) 의미 커맨드 패턴, **패독 모드** 추가
 - **제거**: `vess`, `indicators`, `display_render`(U8g2), `io_expander`(MCP23017)
 - `display_blit` stub(패널 확정 후 구현), CAN 커맨드 레이아웃(`CAN_PROTOCOL.md` §5.7) 갱신
 

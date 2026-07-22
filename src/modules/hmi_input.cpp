@@ -3,13 +3,11 @@
 
 ClusterCommand hmi_compute(const HmiSwitches &in) {
     ClusterCommand cmd;
-    switch (in.gear_raw) {
-        case 1:  cmd.gear = Gear::R; break;
-        case 2:  cmd.gear = Gear::D; break;
-        default: cmd.gear = Gear::N; break;
-    }
-    cmd.paddock    = in.paddock;
-    cmd.drive_mode = (uint8_t)(in.config_bits & 0x03);
+    cmd.paddock       = in.paddock;
+    cmd.tc_enabled    = in.tc_enabled;
+    cmd.regen_level   = (in.regen_a ? 0x01 : 0x00) |
+                        (in.regen_b ? 0x02 : 0x00);
+    cmd.debug_enabled = in.debug_enabled;
 
     return cmd;
 }

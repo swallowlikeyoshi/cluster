@@ -73,7 +73,7 @@
 | MCU → VCU | 피드백 Part II (온도/상태/에러) | `0x1802D0EF` | `0x1802D0F0` | 50ms | 6 |
 | MCU → METER | 계기 메시지 I | `0x180117EF` | `0x180117F0` | 100ms | 6 |
 | MCU → METER | 계기 메시지 II | `0x180217EF` | `0x180217F0` | 100ms | 6 |
-| Cluster → VCU | 커맨드 (config/패독) | `0x1801D0C0` (신규) | — | 100ms | 6 |
+| Cluster → VCU | 커맨드 (패독/TC/회생/디버그) | `0x1801D0C0` (신규) | — | 100ms | 6 |
 
 > ID에서 PS(목적지)·SA(송신)만 컨트롤러별로 바뀜. 위 표의 ID는 `PF<<16 | PS<<8 | SA`로 조립됨(+ Priority).
 
@@ -154,14 +154,15 @@
 
 ### 5.7 Cluster → VCU : 커맨드  `0x1801D0C0` (신규 할당) · 100ms
 
-> 계기판 스위치(기어·주행모드·패독)를 VCU에 전달. **EZkontrol 표준이 아닌 HEVEN 자체 정의.**
+> 계기판 config 버튼(패독·TC·회생제동·디버그)을 VCU에 전달. **EZkontrol 표준이 아닌 HEVEN 자체 정의.**
+> 기어 스위치는 Cluster ESP32에 직접 연결하지 않고 VCU 쪽 ADC/pass-through 회로에서 읽는다.
 > PF=0x01, PS=0xD0(VCU), SA=0xC0(Cluster). MCU→VCU(0x1801D0EF)와 SA로 구분되어 충돌 없음.
 > 인코딩 구현: Cluster 펌웨어 `encode_cluster_command()`. 아래 레이아웃과 일치.
 
 | 바이트 | 항목 | 의미 |
 |--------|------|------|
-| 0 | Gear | 0:N, 1:R, 2:D |
-| 1 | Drive mode | 0:Normal, 1:Efficiency, 2:Sport |
+| 0 | Reserved | 0 |
+| 1 | Config flags | bit0: TC enabled, bit2-1: Regen level(0~3), bit3: Debug enabled, bit7-4: reserved(0) |
 | 2 | Flags | bit0: Paddock request, bit7-1: reserved(0) |
 | 3~7 | 예약 | 0 |
 
@@ -172,7 +173,7 @@
 
 > Cluster가 스위치 입력값이 아니라 **VCU가 확정한 차량 상태**를 표시하기 위한 프레임.
 > 현재 Cluster 펌웨어는 이 프레임이 들어오면 기어/HV/브레이크를 갱신한다. SOC는 선택 사항이며, 현재 주 경로는 Cluster의 BLE BMS 직접 수신이다.
-> VCU 쪽 구현 전에는 Cluster가 스위치 명령값을 기어 표시 fallback으로 사용한다.
+> VCU 쪽 구현 전에는 Cluster가 기어를 확정할 수 없으므로 기본 N 표시로 남는다.
 
 | 바이트 | 항목 | 의미 |
 |--------|------|------|

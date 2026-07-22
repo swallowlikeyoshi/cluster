@@ -25,19 +25,24 @@ void test_decode_current(void) { TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, raw_to_cu
 void test_decode_temp(void)    { TEST_ASSERT_EQUAL_INT(25, raw_to_temp(65)); }                       // 1C/bit, -40
 void test_decode_speed(void)   { TEST_ASSERT_EQUAL_INT(0, raw_to_speed(32000)); }                    // 1rpm/bit, -32000
 
-void test_encode_gear_and_mode(void) {
+void test_encode_config_flags(void) {
     uint8_t out[8];
-    encode_cluster_command({Gear::D, 2, false}, out);
-    TEST_ASSERT_EQUAL_UINT8(2, out[0]);   // gear D = 2
-    TEST_ASSERT_EQUAL_UINT8(2, out[1]);   // drive_mode
+    encode_cluster_command({false, true, 3, true}, out);
+    TEST_ASSERT_EQUAL_UINT8(0, out[0]);   // reserved: gear is handled by VCU
+    TEST_ASSERT_EQUAL_UINT8(0x0F, out[1]); // TC + regen level 3 + debug
     TEST_ASSERT_EQUAL_UINT8(0, out[2] & 0x01);   // paddock off
     TEST_ASSERT_EQUAL_UINT8(0, out[2] & 0xFE);    // remaining flags reserved
 }
 
 void test_encode_paddock_bit(void) {
     uint8_t out[8];
-    encode_cluster_command({Gear::N, 0, true}, out);
+    encode_cluster_command({true, false, 0, false}, out);
     TEST_ASSERT_EQUAL_UINT8(1, out[2] & 0x01);   // paddock on
+}
+void test_encode_regen_clamps_to_two_bits(void) {
+    uint8_t out[8];
+    encode_cluster_command({false, false, 7, false}, out);
+    TEST_ASSERT_EQUAL_UINT8(0x06, out[1] & 0x06);
 }
 
 void setUp(void) {}
@@ -53,7 +58,8 @@ int main(int, char **) {
     RUN_TEST(test_decode_current);
     RUN_TEST(test_decode_temp);
     RUN_TEST(test_decode_speed);
-    RUN_TEST(test_encode_gear_and_mode);
+    RUN_TEST(test_encode_config_flags);
     RUN_TEST(test_encode_paddock_bit);
+    RUN_TEST(test_encode_regen_clamps_to_two_bits);
     return UNITY_END();
 }
