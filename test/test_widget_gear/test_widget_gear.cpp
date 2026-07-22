@@ -7,7 +7,7 @@ static int lit(FrameBuffer &fb) {
     return n;
 }
 void test_each_valid_gear_draws(void) {
-    for (int g = 0; g <= 2; g++) {
+    for (int g = 0; g <= 3; g++) {
         FrameBuffer fb; fb.clear(); widget_gear_draw(fb, 0, 0, g);
         TEST_ASSERT_TRUE(lit(fb) > 0);
     }

@@ -4,3 +4,15 @@
 *.elf
 *.bmp
 .DS_Store
+# KiCad local, lock, and backup files
+**/*-backups/
+**/*.kicad_prl
+**/*.lck
+**/*.bak
+**/fp-info-cache
+**/~*
+
+# Locally generated KiCad outputs
+hardware/**/output/
+hardware/**/gerbers/
+hardware/**/drill/

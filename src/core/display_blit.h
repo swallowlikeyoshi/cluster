@@ -5,10 +5,10 @@
 // ============================================================
 #pragma once
 #include "framebuffer.h"
-// [LOCKED] Pushes the 1bpp framebuffer to the physical panel. The panel is not
-// chosen yet, so show() is a stub; implement it when the OLED/LCD is selected.
+// [LOCKED] Pushes the 1bpp framebuffer to the ILI9341 panel.
 
 namespace display_blit {
     void begin();
     void show(const FrameBuffer &fb);
+    void show(const FrameBuffer &fb, bool warning_tint);
 }

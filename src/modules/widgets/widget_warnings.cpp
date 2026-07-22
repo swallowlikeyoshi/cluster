@@ -1,7 +1,14 @@
 // [FILL-IN] Edit this file. Draw your widget into the framebuffer.
 #include "modules/widgets/widget_warnings.h"
 
+namespace {
+void indicator_box(FrameBuffer &fb, int x, int y, bool active) {
+    fb_rect(fb, x, y, 10, 10, active, true);
+}
+}
+
 void widget_warnings_draw(FrameBuffer &fb, int x, int y, bool fault, bool hv) {
-    if (fault) fb_rect(fb, x,      y, 16, 16, true,  true);   // filled box = fault
-    if (hv)    fb_rect(fb, x + 20, y, 16, 16, false, true);   // outline box = HV present
+    (void)fault;
+    fb_text(fb, x, y, "HV", 1);
+    indicator_box(fb, x + 18, y, hv);
 }

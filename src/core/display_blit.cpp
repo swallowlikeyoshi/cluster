@@ -4,18 +4,45 @@
 //  Application work happens only in src/modules/.
 // ============================================================
 #include "core/display_blit.h"
+#include <Arduino.h>
+#include <SPI.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ILI9341.h>
+
+namespace {
+constexpr int PIN_TFT_CS   = 26;
+constexpr int PIN_TFT_DC   = 25;
+constexpr int PIN_TFT_RST  = 33;
+constexpr int PIN_TFT_SCLK = 18;
+constexpr int PIN_TFT_MOSI = 23;
+constexpr int PIN_TFT_MISO = -1;   // ILI9341 readback is unused.
+
+Adafruit_ILI9341 tft(PIN_TFT_CS, PIN_TFT_DC, PIN_TFT_RST);
+}
 
 namespace display_blit {
 
 void begin() {
-    // TODO(core): init the chosen panel (SPI/I2C) once hardware is selected.
-    // 코어 수정 테스트
+    SPI.begin(PIN_TFT_SCLK, PIN_TFT_MISO, PIN_TFT_MOSI, PIN_TFT_CS);
+    tft.begin();
+    tft.setRotation(1);       // landscape: 320x240
+    tft.fillScreen(ILI9341_BLACK);
 }
 
 void show(const FrameBuffer &fb) {
-    // TODO(core): push fb.bits (1bpp, FB_STRIDE*FB_H bytes) to the panel.
-    // Until then this is a no-op so the firmware builds and runs.
-    (void)fb;
+    show(fb, false);
+}
+
+void show(const FrameBuffer &fb, bool warning_tint) {
+    static uint16_t line[FB_W];
+    const uint16_t on_color = ILI9341_WHITE;
+    const uint16_t off_color = warning_tint ? ILI9341_RED : ILI9341_BLACK;
+    for (int y = 0; y < FB_H; ++y) {
+        for (int x = 0; x < FB_W; ++x) {
+            line[x] = fb.get(x, y) ? on_color : off_color;
+        }
+        tft.drawRGBBitmap(0, y, line, FB_W, 1);
+    }
 }
 
 } // namespace display_blit

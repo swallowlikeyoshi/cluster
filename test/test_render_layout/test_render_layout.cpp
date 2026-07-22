@@ -8,6 +8,7 @@
 #include "modules/widgets/widget_battery.h"
 #include "modules/widgets/widget_warnings.h"
 #include "modules/widgets/widget_gear.h"
+#include "modules/widgets/widget_laptime.h"
 #include <cstdio>
 #include <cstdint>
 #include <vector>
@@ -46,49 +47,123 @@ void write_bmp(const char *path, int w, int h, const std::vector<uint8_t> &rgb) 
     std::fclose(f);
 }
 
+void render_framebuffer(std::vector<uint8_t> &rgb, const FrameBuffer &fb,
+                        int scale, bool warning_screen) {
+    const int W = FB_W * scale;
+    const int H = FB_H * scale;
+    rgb.assign((size_t)W * H * 3, 0);
+    for (int y = 0; y < H; y++) {
+        for (int x = 0; x < W; x++) {
+            const bool on = fb.get(x / scale, y / scale);
+            const size_t i = ((size_t)y * W + x) * 3;
+            if (on) {
+                rgb[i] = rgb[i + 1] = rgb[i + 2] = 255;
+            } else if (warning_screen) {
+                rgb[i] = 255;
+                rgb[i + 1] = 0;
+                rgb[i + 2] = 0;
+            }
+        }
+    }
+}
+
+void draw_normal_layout(FrameBuffer &fb, bool warning) {
+    fb.clear();
+    widget_speed_draw(fb,    10,  10, 1600);
+    widget_warnings_draw(fb, 248,  22, warning, true);
+    widget_gear_draw(fb,     289,  16, 2 /* D */);
+    widget_battery_draw(fb, 285,  48, -1);
+    widget_laptime_draw(fb,  10, 136, 3, 85670, true);
+    widget_best_lap_draw(fb, 205, 207, 1, 80770);
+}
+
+void draw_warning_detail(FrameBuffer &fb) {
+    fb.clear();
+    fb_text(fb, 18, 14, "WARNING", 5);
+    fb_text(fb, 18, 112, "MOTOR HOT", 5);
+}
+
+const uint8_t *status_glyph(char c) {
+    static const uint8_t glyph_b[7] = {0x1E,0x11,0x11,0x1E,0x11,0x11,0x1E};
+    static const uint8_t glyph_s[7] = {0x0F,0x10,0x10,0x0E,0x01,0x01,0x1E};
+    if (c == 'B') return glyph_b;
+    if (c == 'S') return glyph_s;
+    return font_glyph(c);
+}
+
+void status_text(FrameBuffer &fb, int x, int y, const char *text, int scale) {
+    if (scale < 1) scale = 1;
+    int cx = x;
+    for (const char *p = text; *p; ++p) {
+        const uint8_t *g = status_glyph(*p);
+        if (g) {
+            for (int r = 0; r < 7; ++r) {
+                for (int c = 0; c < 5; ++c) {
+                    if (g[r] & (0x10 >> c)) {
+                        fb_rect(fb, cx + c * scale, y + r * scale,
+                                scale, scale, true, true);
+                    }
+                }
+            }
+        }
+        cx += 6 * scale;
+    }
+}
+
+void status_line(FrameBuffer &fb, int &y, const char *text, int scale) {
+    status_text(fb, 8, y, text, scale);
+    y += scale * 8 + 1;
+}
+
+void draw_status_detail(FrameBuffer &fb) {
+    fb.clear();
+    fb_text(fb, 8, 4, "CAR CHECK", 3);
+    int y = 31;
+    status_line(fb, y, "CAN L OK R OK", 2);
+    status_line(fb, y, "VCU OK HV ON", 2);
+    status_line(fb, y, "BMS OK 078% 51V", 2);
+
+    y += 4;
+    status_line(fb, y, "LEFT FAULT", 3);
+    status_line(fb, y, "MTR 088C HOT", 2);
+    status_line(fb, y, "CTRL 074C HOT", 2);
+    status_line(fb, y, "VOLT 121.5 OVER", 2);
+
+    y += 5;
+    status_line(fb, y, "RIGHT OK", 3);
+    status_line(fb, y, "MTR 052C OK", 2);
+    status_line(fb, y, "CTRL 048C OK", 2);
+    status_line(fb, y, "VOLT 119.8 OK", 2);
+}
+
+void write_frame(const char *path, FrameBuffer &fb, int scale, bool warning_screen) {
+    std::vector<uint8_t> rgb;
+    render_framebuffer(rgb, fb, scale, warning_screen);
+    write_bmp(path, FB_W * scale, FB_H * scale, rgb);
+    std::FILE *check = std::fopen(path, "rb");
+    TEST_ASSERT_NOT_NULL_MESSAGE(check, path);
+    if (check) std::fclose(check);
+    auto full_path = std::filesystem::absolute(path);
+    TEST_MESSAGE(full_path.string().c_str());
+}
+
 }  // namespace
 
 void test_render_layout_writes_bmp(void) {
     FrameBuffer fb;
-    fb.clear();
-
-    // Same calls/coordinates as src/core/app_wiring.cpp display_update()
-    widget_speed_draw(fb,    10,  10, 87);
-    widget_battery_draw(fb,  10, 120, 62);
-    widget_warnings_draw(fb, 250, 10, true, true);
-    widget_gear_draw(fb,     270, 110, 2 /* D */);
-
-    // Bounding boxes sized to worst-case content per widget.
-    struct Box { int x, y, w, h; };
-    Box boxes[] = {
-        {10,  10,  96, 28},    // speed:    4 digits @ scale4
-        {10, 120,  96, 12},    // battery:  bar(60x12) + "100%" @ scale1
-        {250, 10,  36, 16},    // warnings: two 16x16 boxes, 20px pitch
-        {270, 110, 18, 21},    // gear:     1 char @ scale3
-    };
-    for (auto &b : boxes) fb_rect(fb, b.x - 2, b.y - 2, b.w + 4, b.h + 4, false, true);
-
     const int SCALE = 3;
-    int W = FB_W * SCALE, H = FB_H * SCALE;
-    std::vector<uint8_t> rgb((size_t)W * H * 3);
-    for (int y = 0; y < H; y++) {
-        for (int x = 0; x < W; x++) {
-            bool on = fb.get(x / SCALE, y / SCALE);
-            uint8_t v = on ? 0 : 255;
-            size_t i = ((size_t)y * W + x) * 3;
-            rgb[i] = rgb[i + 1] = rgb[i + 2] = v;
-        }
-    }
 
-    const char *path = "render_layout.bmp";
-    write_bmp(path, W, H, rgb);
+    draw_normal_layout(fb, false);
+    write_frame("render_layout_current.bmp", fb, SCALE, false);
 
-    std::FILE *check = std::fopen(path, "rb");
-    TEST_ASSERT_NOT_NULL_MESSAGE(check, "failed to write render_layout.bmp");
-    if (check) std::fclose(check);
+    draw_normal_layout(fb, true);
+    write_frame("render_layout_warning.bmp", fb, SCALE, true);
 
-    auto full_path = std::filesystem::absolute(path);
-    TEST_MESSAGE(full_path.string().c_str());
+    draw_warning_detail(fb);
+    write_frame("render_warning_detail_motor_hot.bmp", fb, SCALE, true);
+
+    draw_status_detail(fb);
+    write_frame("render_status_detail.bmp", fb, SCALE, false);
 }
 
 void setUp(void) {}

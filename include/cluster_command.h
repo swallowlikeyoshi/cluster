@@ -8,10 +8,9 @@
 // [LOCKED] Contract between the HMI module and the CAN layer: the "meaning"
 // the Cluster sends to the VCU. The CAN byte encoding lives in can_protocol.
 
-enum class Gear : uint8_t { N = 0, R = 1, D = 2 };
-
 struct ClusterCommand {
-    Gear    gear       = Gear::N;
-    uint8_t drive_mode = 0;      // 0 Normal, 1 Efficiency, 2 Sport ...
-    bool    paddock    = false;  // request VCU speed limit
+    bool    paddock       = false; // request VCU speed limit
+    bool    tc_enabled    = false; // traction control / torque vectoring request
+    uint8_t regen_level   = 0;     // 0..3 from SW_REGEN_A/B
+    bool    debug_enabled = false; // request verbose/debug logging
 };

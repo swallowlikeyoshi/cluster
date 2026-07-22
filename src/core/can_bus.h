@@ -11,4 +11,5 @@ namespace can_bus {
     void begin();
     void poll_rx();                          // drain RX -> state (parse is a stub)
     void send_command(const ClusterCommand &cmd);   // encode -> 0x1801D0C0
+    void send_bms_status();                  // encode -> 0x18F3FFC0 / 0x18F4FFC0
 }
